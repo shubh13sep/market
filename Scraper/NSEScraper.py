@@ -57,7 +57,8 @@ class DataType(Enum):
     Issue_Summary_Document_VoluntaryDelisting_Post_SME = "Issue_Summary_Document_VoluntaryDelisting_Post_SME"
 
     SCHEME_OF_ARRANGEMENT = "SCHEME_OF_ARRANGEMENT"
-
+    QUARTERLY_RESULT_EQUITY = "QUARTERLY_RESULT_EQUITY"
+    QUARTERLY_RESULT_SME = "QUARTERLY_RESULT_SME"
 
     def getUrl(self, from_date: str, to_date:str) -> str:
         """ Returns the API endpoint URL for this data type and date. """
@@ -155,6 +156,11 @@ class DataType(Enum):
             return f"https://www.nseindia.com/api/XBRL-announcements?index=sme&from_date={from_date}&to_date={to_date}&type=isdPostVoluntary"
         elif self == DataType.SCHEME_OF_ARRANGEMENT:
             return f"https://www.nseindia.com/api/corporates/offerdocs/arrangementscheme?index=equities&from_date={from_date}&to_date={to_date}"
+        elif self == DataType.QUARTERLY_RESULT_EQUITY:
+            return f"https://www.nseindia.com/api/corporates-financial-results?index=equities&from_date={from_date}&to_date={to_date}&period=Quarterly"
+        elif self == DataType.QUARTERLY_RESULT_SME:
+            return f"https://www.nseindia.com/api/corporates-financial-results?index=sme&from_date={from_date}&to_date={to_date}&period=Half-Yearly"
+
         else:
             raise ValueError("Invalid DataType provided.")
 
@@ -190,7 +196,7 @@ def fetch_nse_data(data_type: DataType, start_date, end_date):
     session.headers.update(headers)
 
     # Step 1: Get NSE home page to set cookies
-    home_url = "https://www.nseindia.com"
+    home_url = "https://www.nseindia.com/companies-listing/corporate-filings-financial-results"
     retry_request(session, home_url)
     # session.get(home_url, timeout=5)  # Helps bypass security
 
@@ -316,6 +322,8 @@ def retry_request(session, url, max_retries=5, timeout=60, backoff_factor=5):
     for attempt in range(max_retries):
         try:
             response = session.get(url, timeout=timeout)
+            print(response.status_code)
+            print(str(response.text))
 
             if response.status_code == 200:
                 return response  # Successful response
@@ -378,7 +386,9 @@ def retry_request(session, url, max_retries=5, timeout=60, backoff_factor=5):
 # scrape_data(DataType.Issue_Summary_Document_VoluntaryDelisting_Post_SME,"01-01-2010", "04-02-2025", 300)
 #scrape_data(DataType.QIP_InPrinciple,"01-01-2010", "04-02-2025", 300)
 #scrape_data(DataType.QIP_Listing, "01-01-2010", "04-02-2025", 300)
-scrape_data(DataType.SCHEME_OF_ARRANGEMENT, "01-01-2010", "04-02-2025", 300)
+#scrape_data(DataType.SCHEME_OF_ARRANGEMENT, "01-01-2010", "04-02-2025", 300)
+scrape_data(DataType.QUARTERLY_RESULT_EQUITY, "01-01-2007", "22-03-2025", 300)
+scrape_data(DataType.QUARTERLY_RESULT_SME, "01-01-2007", "22-03-2025", 300)
 
 
 
