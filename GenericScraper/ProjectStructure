@@ -1,0 +1,7 @@
+webscraper/
+├── config_loader.py          # Load and validate configuration
+├── scraper.py                # Handle API calls & HTML parsing
+├── navigator.py              # Navigate paginated or dynamic sites
+├── output_generator.py       # Format and export output to JSON
+├── utils.py                  # Reusable functions
+└── main.py                   # Entry point
