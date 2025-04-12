@@ -64,7 +64,7 @@ def login_via_form(config):
         print("Login failed.")
         return False
 
-def login_via_playwright(config):
+def login_via_playwright(config, scrape_url):
     COOKIE_FILE = "playwright_cookies.json"
 
     def save_cookies(context):
@@ -84,7 +84,7 @@ def login_via_playwright(config):
         load_cookies(context)
 
         page = context.new_page()
-        page.goto(config["url"])
+        page.goto(scrape_url)
         if "Logout" in page.content() or "Dashboard" in page.content():
             print("Reusing existing Playwright cookies.")
             html = page.content()

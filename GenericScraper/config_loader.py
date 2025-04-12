@@ -153,3 +153,6 @@ def load_config(file_path):
 # output:
 #   format: json                    # options: json / csv (if extended)
 #   path: scraped_output.json
+
+
+

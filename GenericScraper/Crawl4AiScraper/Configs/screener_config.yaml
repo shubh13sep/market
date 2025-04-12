@@ -1,21 +1,38 @@
+# URL to start scraping from
 url: https://www.screener.in/full-text-search/?q=%22board+meeting%22+and+%22Qualified+Institutions+Placement%22+and+%22consider%22&type=announcements
+
+# Reusable browser session name
+session: "default"
+
+# Optional request headers
 headers:
   Referer: https://www.screener.in/login/
   User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
   Content-Type: application/x-www-form-urlencoded
   Origin: https://www.screener.in
+
+# Login section: fill fields and submit
 login:
   enabled: true
-  type: form         # form or 'javascript'
   url: https://www.screener.in/login/
-  csrf_field: csrfmiddlewaretoken  # name of the hidden input
-  csrf_source: html                # html or 'cookie' or 'header'
-  username_field: username
-  password_field: password
-  credentials:
-    username: shubhamsethi@outlook.com
-    password: Sammed@55
-selectors:
+  actions:
+    - type: fill
+      selector: "input[name='username']"
+      value: shubhamsethi@outlook.com
+    - type: fill
+      selector: "input[name='password']"
+      value: Sammed@55
+    - type: click
+      selector: "button[type='submit']"
+
+# Pagination support
+pagination:
+  param: page
+  start: 1
+  end: 3
+
+# Extraction schema
+extract:
   announcements:
     type: group
     multiple: true
@@ -38,13 +55,8 @@ selectors:
         type: css
         query: "div.margin-top-4.ink-700.font-size-14"
 
-pagination:
-  type: param                      # options: param (e.g., ?page=2), TODO: can extend to link or JS click in future
-  param: page
-  appender: "&"                   # Options: ?, &, / or custom (like -)
-  start: 1
-  end: 3
-  step: 1
-output:
-  format: json                    # options: json / csv (if extended)
-  path: scraped_output.json
+# Output format: json or markdown
+output_format: "json"
+
+# If true, will crawl entire rendered page HTML/DOM
+full_page: false

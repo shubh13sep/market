@@ -234,7 +234,7 @@ urlOutputMapping = {
 # File to store the scraped data
 output_file = "scraped_warrant"
 for  url in urlOutputMapping:
-    filename = urlOutputMapping[url];
+    filename = urlOutputMapping[url]
     scrapedData = scrape_url(append_pagenum(url), filename)
 
 

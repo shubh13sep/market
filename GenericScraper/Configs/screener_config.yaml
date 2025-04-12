@@ -1,0 +1,392 @@
+url: https://www.screener.in/full-text-search/?q=%22board+meeting%22+and+%22Qualified+Institutions+Placement%22+and+%22consider%22&type=announcements
+headers:
+  Referer: https://www.screener.in/login/
+  User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+  Content-Type: application/x-www-form-urlencoded
+  Origin: https://www.screener.in
+login:
+  enabled: true
+  type: form         # form or 'javascript'
+  url: https://www.screener.in/login/
+  csrf_field: csrfmiddlewaretoken  # name of the hidden input
+  csrf_source: html                # html or 'cookie' or 'header'
+  username_field: username
+  password_field: password
+  credentials:
+    username: shubhamsethi@outlook.com
+    password: Sammed@55
+selectors:
+  announcements:
+    type: group
+    multiple: true
+    container: "div[class*='margin-top-20'][class*='margin-bottom-36']"
+    fields:
+      company_name:
+        type: css
+        query: "span.hover-link.ink-900"
+      title:
+        type: css
+        query: "div.font-size-17.font-weight-500 > a"
+      announcement_url:
+        type: css
+        query: "div.font-size-17.font-weight-500 > a"
+        attribute: href
+      detail:
+        type: css
+        query: "div.ink-700.font-size-16"
+      announcement_date:
+        type: css
+        query: "div.margin-top-4.ink-700.font-size-14"
+
+pagination:
+  type: param                      # options: param (e.g., ?page=2), TODO: can extend to link or JS click in future
+  param: page
+  appender: "&"                   # Options: ?, &, / or custom (like -)
+  start: 1
+  end: 3
+  step: 1
+output:
+  format: json                    # options: json / csv (if extended)
+  path: scraped_output.json
+
+
+#### YAML Configuration Documentation for GenericScraper
+#
+#This document provides a detailed explanation of the parameters available in the `screener_config.yaml` file used by the GenericScraper tool. The YAML file is structured to define the scraping behavior, including URL, headers, login details, selectors, pagination, and output settings.
+#
+#---
+#
+##### **1. `url`**
+#- **Type**: String
+#- **Description**: The base URL from which the scraper will start fetching data.
+#- **Example**:
+#  ```yaml
+#  url: https://www.screener.in/full-text-search/?q=%22board+meeting%22+and+%22Qualified+Institutions+Placement%22+and+%22consider%22&type=announcements
+#  ```
+#
+#---
+#
+##### **2. `headers`**
+#- **Type**: Dictionary
+#- **Description**: HTTP headers to be sent with each request. Commonly used headers include `Referer`, `User-Agent`, `Content-Type`, and `Origin`.
+#- **Optional**: Yes
+#- **Example**:
+#  ```yaml
+#  headers:
+#    Referer: https://www.screener.in/login/
+#    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+#    Content-Type: application/x-www-form-urlencoded
+#    Origin: https://www.screener.in
+#  ```
+#
+#---
+#
+##### **3. `login`**
+#- **Type**: Dictionary
+#- **Description**: Configuration for logging into the website before scraping. This section is optional and only required if the website requires authentication.
+#- **Optional**: Yes
+#
+###### **3.1 `enabled`**
+#- **Type**: Boolean
+#- **Description**: Whether login is required (`true`) or not (`false`).
+#- **Example**:
+#  ```yaml
+#  enabled: true
+#  ```
+#
+###### **3.2 `type`**
+#- **Type**: String
+#- **Description**: The type of login mechanism. Supported values are `form` (for form-based login) and `javascript` (for JavaScript-based login).
+#- **Example**:
+#  ```yaml
+#  type: form
+#  ```
+#
+###### **3.3 `url`**
+#- **Type**: String
+#- **Description**: The URL of the login page.
+#- **Example**:
+#  ```yaml
+#  url: https://www.screener.in/login/
+#  ```
+#
+###### **3.4 `csrf_field`**
+#- **Type**: String
+#- **Description**: The name of the CSRF token field in the login form. This is often required for form-based login.
+#- **Optional**: Yes
+#- **Example**:
+#  ```yaml
+#  csrf_field: csrfmiddlewaretoken
+#  ```
+#
+###### **3.5 `csrf_source`**
+#- **Type**: String
+#- **Description**: The source of the CSRF token. Supported values are `html` (extracted from the HTML), `cookie` (extracted from cookies), or `header` (extracted from HTTP headers).
+#- **Optional**: Yes
+#- **Example**:
+#  ```yaml
+#  csrf_source: html
+#  ```
+#
+###### **3.6 `username_field`**
+#- **Type**: String
+#- **Description**: The name of the username input field in the login form.
+#- **Example**:
+#  ```yaml
+#  username_field: username
+#  ```
+#
+###### **3.7 `password_field`**
+#- **Type**: String
+#- **Description**: The name of the password input field in the login form.
+#- **Example**:
+#  ```yaml
+#  password_field: password
+#  ```
+#
+###### **3.8 `credentials`**
+#- **Type**: Dictionary
+#- **Description**: Contains the login credentials.
+#- **Example**:
+#  ```yaml
+#  credentials:
+#    username: shubhamsethi@outlook.com
+#    password: Sammed@55
+#  ```
+#
+#---
+#
+##### **4. `selectors`**
+#- **Type**: Dictionary
+#- **Description**: Defines the CSS or XPath selectors used to extract data from the HTML content.
+#
+###### **4.1 `announcements`**
+#- **Type**: Dictionary
+#- **Description**: A group selector for extracting multiple announcements.
+#
+####### **4.1.1 `type`**
+#- **Type**: String
+#- **Description**: The type of selector. Use `group` for extracting multiple items.
+#- **Example**:
+#  ```yaml
+#  type: group
+#  ```
+#
+####### **4.1.2 `multiple`**
+#- **Type**: Boolean
+#- **Description**: Whether multiple items should be extracted (`true`) or just a single item (`false`).
+#- **Example**:
+#  ```yaml
+#  multiple: true
+#  ```
+#
+####### **4.1.3 `container`**
+#- **Type**: String
+#- **Description**: The CSS selector for the container that holds each announcement.
+#- **Example**:
+#  ```yaml
+#  container: "div[class*='margin-top-20'][class*='margin-bottom-36']"
+#  ```
+#
+####### **4.1.4 `fields`**
+#- **Type**: Dictionary
+#- **Description**: Defines the fields to be extracted from each announcement.
+#
+######## **4.1.4.1 `company_name`**
+#- **Type**: Dictionary
+#- **Description**: Selector for extracting the company name.
+#- **Example**:
+#  ```yaml
+#  company_name:
+#    type: css
+#    query: "span.hover-link.ink-900"
+#  ```
+#
+######## **4.1.4.2 `title`**
+#- **Type**: Dictionary
+#- **Description**: Selector for extracting the title of the announcement.
+#- **Example**:
+#  ```yaml
+#  title:
+#    type: css
+#    query: "div.font-size-17.font-weight-500 > a"
+#  ```
+#
+######## **4.1.4.3 `announcement_url`**
+#- **Type**: Dictionary
+#- **Description**: Selector for extracting the URL of the announcement.
+#- **Example**:
+#  ```yaml
+#  announcement_url:
+#    type: css
+#    query: "div.font-size-17.font-weight-500 > a"
+#    attribute: href
+#  ```
+#
+######## **4.1.4.4 `detail`**
+#- **Type**: Dictionary
+#- **Description**: Selector for extracting the details of the announcement.
+#- **Example**:
+#  ```yaml
+#  detail:
+#    type: css
+#    query: "div.ink-700.font-size-16"
+#  ```
+#
+######## **4.1.4.5 `announcement_date`**
+#- **Type**: Dictionary
+#- **Description**: Selector for extracting the date of the announcement.
+#- **Example**:
+#  ```yaml
+#  announcement_date:
+#    type: css
+#    query: "div.margin-top-4.ink-700.font-size-14"
+#  ```
+#
+#---
+#
+##### **5. `pagination`**
+#- **Type**: Dictionary
+#- **Description**: Configuration for handling pagination on the website.
+#
+###### **5.1 `type`**
+#- **Type**: String
+#- **Description**: The type of pagination. Currently, only `param` (e.g., `?page=2`) is supported.
+#- **Example**:
+#  ```yaml
+#  type: param
+#  ```
+#
+###### **5.2 `param`**
+#- **Type**: String
+#- **Description**: The query parameter used for pagination (e.g., `page`).
+#- **Example**:
+#  ```yaml
+#  param: page
+#  ```
+#
+###### **5.3 `appender`**
+#- **Type**: String
+#- **Description**: The character used to append the pagination parameter to the URL. Common values are `?`, `&`, or `/`.
+#- **Example**:
+#  ```yaml
+#  appender: "&"
+#  ```
+#
+###### **5.4 `start`**
+#- **Type**: Integer
+#- **Description**: The starting page number for pagination.
+#- **Example**:
+#  ```yaml
+#  start: 1
+#  ```
+#
+###### **5.5 `end`**
+#- **Type**: Integer
+#- **Description**: The ending page number for pagination.
+#- **Example**:
+#  ```yaml
+#  end: 3
+#  ```
+#
+###### **5.6 `step`**
+#- **Type**: Integer
+#- **Description**: The step size for pagination (e.g., increment by 1 for each page).
+#- **Example**:
+#  ```yaml
+#  step: 1
+#  ```
+#
+#---
+#
+##### **6. `output`**
+#- **Type**: Dictionary
+#- **Description**: Configuration for the output format and file path.
+#
+###### **6.1 `format`**
+#- **Type**: String
+#- **Description**: The format of the output file. Currently, only `json` is supported.
+#- **Example**:
+#  ```yaml
+#  format: json
+#  ```
+#
+###### **6.2 `path`**
+#- **Type**: String
+#- **Description**: The file path where the scraped data will be saved.
+#- **Example**:
+#  ```yaml
+#  path: scraped_output.json
+#  ```
+#
+#---
+#
+#### **Example YAML Configuration**
+#
+#```yaml
+#url: https://www.screener.in/full-text-search/?q=%22board+meeting%22+and+%22Qualified+Institutions+Placement%22+and+%22consider%22&type=announcements
+#headers:
+#  Referer: https://www.screener.in/login/
+#  User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+#  Content-Type: application/x-www-form-urlencoded
+#  Origin: https://www.screener.in
+#login:
+#  enabled: true
+#  type: form
+#  url: https://www.screener.in/login/
+#  csrf_field: csrfmiddlewaretoken
+#  csrf_source: html
+#  username_field: username
+#  password_field: password
+#  credentials:
+#    username: shubhamsethi@outlook.com
+#    password: Sammed@55
+#selectors:
+#  announcements:
+#    type: group
+#    multiple: true
+#    container: "div[class*='margin-top-20'][class*='margin-bottom-36']"
+#    fields:
+#      company_name:
+#        type: css
+#        query: "span.hover-link.ink-900"
+#      title:
+#        type: css
+#        query: "div.font-size-17.font-weight-500 > a"
+#      announcement_url:
+#        type: css
+#        query: "div.font-size-17.font-weight-500 > a"
+#        attribute: href
+#      detail:
+#        type: css
+#        query: "div.ink-700.font-size-16"
+#      announcement_date:
+#        type: css
+#        query: "div.margin-top-4.ink-700.font-size-14"
+#pagination:
+#  type: param
+#  param: page
+#  appender: "&"
+#  start: 1
+#  end: 3
+#  step: 1
+#output:
+#  format: json
+#  path: scraped_output.json
+#```
+#
+#---
+#
+#### **Usage Instructions**
+#
+#1. **Configure the `url`**: Set the base URL from which you want to scrape data.
+#2. **Set `headers`**: Add any necessary HTTP headers, such as `User-Agent` or `Referer`.
+#3. **Configure `login`**: If the website requires login, provide the login URL, CSRF token details, and credentials.
+#4. **Define `selectors`**: Specify the CSS or XPath selectors for the data you want to extract.
+#5. **Set up `pagination`**: Configure how the scraper should handle pagination.
+#6. **Configure `output`**: Define the output format and file path.
+#7. **Run the scraper**: Execute the scraper using the `main.py` script.
+#
+#---
+#
+#This documentation should help you configure the `screener_config.yaml` file effectively for your scraping needs.

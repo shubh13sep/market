@@ -1,7 +1,8 @@
 from scraper import fetch_page, parse_content
-
-def paginate_and_scrape(config):
-    base_url = config["url"]
+import asyncio
+from crawl4ai import *
+def paginate_and_scrape(config, scrape_url):
+    base_url = scrape_url
     headers = config.get("headers", {})
     selectors = config["selectors"]
     results = []
@@ -28,7 +29,6 @@ def paginate_and_scrape(config):
 
         print(f"[INFO] Fetching page {i}: {url}")
         html = fetch_page(url, headers)
-        print(html)
         results.append(parse_content(html, selectors))
         if pagination_rule["type"] == "param":
             url = f"{base_url}?{pagination_rule['param']}={i}"
@@ -39,6 +39,10 @@ def paginate_and_scrape(config):
         html = fetch_page(url, headers)
         print("HTML Loaded: " + url)
         results.append(parse_content(html, selectors))
-
+        asyncio.run(crawl4AIScrape(url))
     return results
 
+async def crawl4AIScrape(url):
+    async with AsyncWebCrawler() as crawler:
+        result = await crawler.arun(url)
+        print(result.markdown)

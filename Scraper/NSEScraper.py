@@ -8,6 +8,9 @@ from enum import Enum
 
 class DataType(Enum):
     Announcement_Equity_Main_Board = "Announcement_Equity_Main_Board"
+    Announcement_Equity_VaibhavGlobal_Company = "Announcement_Equity_VaibhavGlobal_Company"
+    VAIBHAV_Reg7 = "Vaibhav_Reg7"
+    VAIBHAV_PIT = "VAIBHAV_PIT"
     Announcement_SME = "Announcement_SME"
     Announcement_Debt = "Announcement_Debt"
     Announcement_Mutual_Fund = "Announcement_Mutual_Fund"
@@ -64,6 +67,12 @@ class DataType(Enum):
         """ Returns the API endpoint URL for this data type and date. """
         if self == DataType.Announcement_Equity_Main_Board:
             return f"https://www.nseindia.com/api/corporate-announcements?index=equities&from_date={from_date}&to_date={to_date}"
+        elif self == DataType.VAIBHAV_Reg7:
+            return f"https://www.nseindia.com/api/corporates-pit?index=equities&symbol=VAIBHAVGBL&issuer=Vaibhav%20Global%20Limited&{from_date}&to_date={to_date}"
+        elif self == DataType.VAIBHAV_PIT:
+            return f"https://www.nseindia.com/api/corporate-IT-PIT-Annual?index=equities&symbol=VAIBHAVGBL&issuer=Vaibhav%20Global%20Limited&from_date={from_date}&to_date={to_date}"
+        elif self == DataType.Announcement_Equity_VaibhavGlobal_Company:
+            return f"https://www.nseindia.com/api/corporate-disclosure-getquote?symbol=VAIBHAVGBL&corpType=announcement&market=equities&from_date={from_date}&to_date={to_date}"
         elif self == DataType.Announcement_SME:
             return f"https://www.nseindia.com/api/corporate-announcements?index=sme&from_date={from_date}&to_date={to_date}"
         elif self == DataType.Announcement_Debt:
@@ -387,8 +396,12 @@ def retry_request(session, url, max_retries=5, timeout=60, backoff_factor=5):
 #scrape_data(DataType.QIP_InPrinciple,"01-01-2010", "04-02-2025", 300)
 #scrape_data(DataType.QIP_Listing, "01-01-2010", "04-02-2025", 300)
 #scrape_data(DataType.SCHEME_OF_ARRANGEMENT, "01-01-2010", "04-02-2025", 300)
-scrape_data(DataType.QUARTERLY_RESULT_EQUITY, "01-01-2007", "22-03-2025", 300)
-scrape_data(DataType.QUARTERLY_RESULT_SME, "01-01-2007", "22-03-2025", 300)
+#scrape_data(DataType.QUARTERLY_RESULT_EQUITY, "01-01-2007", "22-03-2025", 300)
+#scrape_data(DataType.QUARTERLY_RESULT_SME, "01-01-2007", "22-03-2025", 300)
+#scrape_data(DataType.Announcement_Equity_Main_Board, "26-03-2025", "29-03-2025", 5000)
+#scrape_data(DataType.Announcement_Equity_VaibhavGlobal_Company, "01-01-2000", "06-04-2025", 500)
+#scrape_data(DataType.VAIBHAV_Reg7, "01-01-2000", "06-04-2025", 500)
+scrape_data(DataType.VAIBHAV_PIT, "01-01-2000", "06-04-2025", 500)
 
 
 
