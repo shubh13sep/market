@@ -1,0 +1,90 @@
+# NSE Corporate Announcements Scraper Configuration
+
+# Base URL to start scraping from (will be modified with date parameters)
+url: "https://www.screener.in/full-text-search/?q=%22board+meeting%22+and+%22Qualified+Institutions+Placement%22+and+%22consider%22&type=announcements"
+
+# Reusable browser session name
+
+# Browser settings example
+headers:
+  User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+  Referer: "https://www.screener.in/login/"
+  Accept-Language: "en-US,en;q=0.9"
+  Origin: "https://www.screener.in"
+  Content-Type: "application/x-www-form-urlencoded"
+
+# Enable JavaScript rendering
+render_js: true
+# Stealth mode to avoid bot detection
+stealth_mode: true
+timeout: 30000
+wait_for: "main"
+session: "screener"
+
+# Login configuration example
+login:
+  enabled: true
+  url: "https://www.screener.in/login/"
+  actions:
+    - type: fill
+      selector: "input[name='username']"
+      value: "shubhamsethi@outlook.com"
+    - type: fill
+      selector: "input[name='password']"
+      value: "Sammed@55"
+    - type: click
+      selector: "button[type='submit']"
+    - type: wait
+      duration: 2
+  success_indicator: ".account"
+
+
+# Pagination navigation example
+navigation_type: "pagination"
+pagination:
+  param: "page"
+  start: 1
+  end: 25
+  step: 1
+  appender: "&"
+  stop_if_empty: true
+
+extract:
+  announcements:
+    type: group
+    multiple: true
+    container: "div[class*='margin-top-20'][class*='margin-bottom-36']"
+    fields:
+      company_name:
+        type: css
+        query: "span.hover-link.ink-900"
+      title:
+        type: css
+        query: "div.font-size-17.font-weight-500 > a"
+      announcement_url:
+        type: css
+        query: "div.font-size-17.font-weight-500 > a"
+        attribute: href
+      detail:
+        type: css
+        query: "div.ink-700.font-size-16"
+      announcement_date:
+        type: css
+        query: "div.margin-top-4.ink-700.font-size-14"
+
+# Apply additional waits between requests to avoid rate limiting
+request_delay: 3
+
+# Output configuration
+output_format: "json"
+output_dir: "Output"
+merge_results: true
+
+# API response processing
+parse_json: true
+
+# Additional custom settings for this scraper
+initial_visit_required: true  # Visit the main page first to set cookies
+max_retries: 3                # Number of retries for failed requests
+

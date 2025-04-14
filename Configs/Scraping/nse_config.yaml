@@ -1,0 +1,56 @@
+# NSE Corporate Announcements Scraper Configuration
+
+# Base URL to start scraping from (will be modified with date parameters)
+url: "https://www.nseindia.com/companies-listing/corporate-filings-announcements"
+
+# Reusable browser session name
+session: "nse_scraper"
+
+# Browser headers for avoiding detection
+headers:
+  User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"
+  Accept: "application/json, text/plain, */*"
+  Referer: "https://www.nseindia.com/companies-listing/corporate-filings-announcements"
+  DNT: "1"
+  Connection: "keep-alive"
+
+# Enable JavaScript rendering
+render_js: true
+
+# Navigation type - we'll use API endpoints for NSE
+navigation_type: "api"
+
+# API endpoints to call (generated dynamically during runtime)
+endpoints:
+  - url: "https://www.nseindia.com/api/corporate-announcements?index=equities&from_date={from_date}&to_date={to_date}"
+    method: "GET"
+
+# Date range for scraping
+date_range:
+  start_date: "01-01-2024"  # DD-MM-YYYY format
+  end_date: "31-01-2024"    # DD-MM-YYYY format
+  format: "DD-MM-YYYY"
+
+# Stealth mode to avoid bot detection
+stealth_mode: true
+
+# Apply additional waits between requests to avoid rate limiting
+request_delay: 3
+
+# Output configuration
+output_format: "json"
+output_dir: "nse_announcements"
+merge_results: true
+
+# API response processing
+parse_json: true
+
+# Additional custom settings for this scraper
+initial_visit_required: true  # Visit the main page first to set cookies
+max_retries: 3                # Number of retries for failed requests
+
+# Custom processor for date handling
+date_processor:
+  enabled: true
+  format: "%d-%m-%Y"
+  field_name: "announcement_date"

@@ -1,0 +1,394 @@
+# Crawl4AI Examples
+
+This document provides practical examples for using the Crawl4AI Scraper Framework with various types of websites.
+
+## Example 1: NSE Corporate Announcements
+
+This example demonstrates how to scrape corporate announcements from the National Stock Exchange of India.
+
+### Configuration File
+
+```yaml
+# NSE Corporate Announcements Scraper Configuration
+url: "https://www.nseindia.com/companies-listing/corporate-filings-announcements"
+session: "nse_scraper"
+headers:
+  User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"
+  Accept: "application/json, text/plain, */*"
+  Referer: "https://www.nseindia.com/companies-listing/corporate-filings-announcements"
+  DNT: "1"
+  Connection: "keep-alive"
+
+render_js: true
+navigation_type: "api"
+endpoints:
+  - url: "https://www.nseindia.com/api/corporate-announcements?index=equities&from_date={from_date}&to_date={to_date}"
+    method: "GET"
+
+date_range:
+  start_date: "01-01-2024"
+  end_date: "31-01-2024"
+  format: "DD-MM-YYYY"
+
+stealth_mode: true
+request_delay: 3
+output_format: "json"
+output_dir: "nse_announcements"
+```
+
+### Run Command
+
+```bash
+python crawl4ai_main.py -c configs/nse_config.yaml -v
+```
+
+### Implementation Notes:
+
+The NSE example uses the API navigation type to directly access the JSON data from the NSE API. It needs JavaScript rendering because NSE requires cookies that are set by JavaScript. The date range allows for scraping announcements across multiple days.
+
+## Example 2: E-commerce Product Scraping
+
+This example shows how to scrape product information from an e-commerce website with pagination.
+
+### Configuration File
+
+```yaml
+url: "https://example-electronics.com/products"
+session: "ecommerce_scraper"
+headers:
+  User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"
+
+render_js: true
+navigation_type: "pagination"
+pagination:
+  param: "page"
+  start: 1
+  end: 10
+  stop_if_empty: true
+
+extract:
+  products:
+    type: group
+    multiple: true
+    container: "div.product-card"
+    fields:
+      name:
+        type: css
+        query: "h2.product-name"
+      price:
+        type: css
+        query: "span.price"
+      original_price:
+        type: css
+        query: "span.original-price"
+      discount_percent:
+        type: css
+        query: "span.discount-badge"
+      rating:
+        type: css
+        query: "div.rating"
+      image_url:
+        type: css
+        query: "img.product-image"
+        attribute: src
+      product_url:
+        type: css
+        query: "a.product-link"
+        attribute: href
+
+output_format: "json"
+output_dir: "ecommerce_products"
+```
+
+### Run Command
+
+```bash
+python crawl4ai_main.py -c configs/ecommerce_config.yaml
+```
+
+## Example 3: News Articles with Authentication
+
+This example demonstrates how to scrape articles from a news website that requires login.
+
+### Configuration File
+
+```yaml
+url: "https://premium-news-site.com/articles"
+session: "news_scraper"
+headers:
+  User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"
+
+render_js: true
+
+# Login configuration
+login:
+  enabled: true
+  url: "https://premium-news-site.com/login"
+  actions:
+    - type: fill
+      selector: "input#email"
+      value: "youremail@example.com"
+    - type: fill
+      selector: "input#password"
+      value: "yourpassword"
+    - type: click
+      selector: "button[type='submit']"
+  success_indicator: "div.user-profile-icon"
+
+navigation_type: "links"
+link_selector: "h2.article-title > a"
+max_links: 20
+
+extract:
+  title:
+    type: css
+    query: "h1.article-headline"
+  author:
+    type: css
+    query: "span.author-name"
+  published_date:
+    type: css
+    query: "time.publish-time"
+  content:
+    type: css
+    query: "div.article-body"
+  tags:
+    type: css
+    query: "a.article-tag"
+    multiple: true
+
+output_format: "markdown"
+output_dir: "news_articles"
+```
+
+### Run Command
+
+```bash
+python crawl4ai_main.py -c configs/news_config.yaml -o premium_articles
+```
+
+## Example 4: Multi-step Data Collection
+
+This example shows how to implement a multi-step scraping process that first collects a list of items and then visits each item's detail page.
+
+### Configuration File
+
+```yaml
+url: "https://example-property-listings.com/search"
+session: "property_scraper"
+headers:
+  User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"
+
+render_js: true
+
+# Step 1: Collect property links
+navigation_type: "pagination"
+pagination:
+  param: "page"
+  start: 1
+  end: 5
+
+# Collect property links
+extract:
+  property_links:
+    type: css
+    query: "a.property-card-link"
+    attribute: href
+    multiple: true
+  property_ids:
+    type: css
+    query: "div.property-card"
+    attribute: data-id
+    multiple: true
+
+# Step 2: Define follow-up extraction for detail pages
+detail_extraction:
+  enabled: true
+  per_item: true
+  extract:
+    property_title:
+      type: css
+      query: "h1.property-title"
+    price:
+      type: css
+      query: "div.property-price"
+    description:
+      type: css
+      query: "div.property-description"
+    features:
+      type: group
+      multiple: true
+      container: "ul.property-features li"
+      fields:
+        feature:
+          type: css
+          query: "span.feature-text"
+    agent_details:
+      type: group
+      container: "div.agent-info"
+      fields:
+        name:
+          type: css
+          query: "div.agent-name"
+        phone:
+          type: css
+          query: "div.agent-phone"
+        email:
+          type: css
+          query: "div.agent-email"
+
+output_format: "json"
+output_dir: "property_listings"
+merge_results: true
+```
+
+### Run Command
+
+```bash
+python crawl4ai_main.py -c configs/property_config.yaml
+```
+
+## Example 5: API-based Data Collection
+
+This example demonstrates how to collect data from a series of API endpoints with authentication.
+
+### Configuration File
+
+```yaml
+url: "https://api-service.com/data"
+session: "api_scraper"
+headers:
+  User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"
+  Accept: "application/json"
+  Content-Type: "application/json"
+
+# API typically uses tokens for authentication
+login:
+  enabled: true
+  url: "https://api-service.com/auth/login"
+  actions:
+    - type: api_post
+      payload: {"username": "yourusername", "password": "yourpassword"}
+  token_extractor: "data.token"  # Extract token from JSON response
+  token_type: "Bearer"
+
+navigation_type: "api"
+endpoints:
+  - url: "https://api-service.com/api/users"
+    method: "GET"
+    name: "users"
+  - url: "https://api-service.com/api/products"
+    method: "GET"
+    name: "products"
+  - url: "https://api-service.com/api/orders"
+    method: "GET"
+    name: "orders"
+    params:
+      limit: 100
+      offset: 0
+  - url: "https://api-service.com/api/statistics"
+    method: "GET"
+    name: "statistics"
+
+output_format: "json"
+output_dir: "api_data"
+merge_results: false
+```
+
+### Run Command
+
+```bash
+python crawl4ai_main.py -c configs/api_config.yaml
+```
+
+## Example 6: Social Media Data Collection with Scrolling
+
+This example shows how to scrape data from a social media-like site that uses infinite scrolling.
+
+### Configuration File
+
+```yaml
+url: "https://example-social-site.com/trending"
+session: "social_scraper"
+headers:
+  User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"
+
+render_js: true
+stealth_mode: true
+
+# Special handling for infinite scrolling
+navigation_type: "scroll"
+scroll:
+  max_scrolls: 10
+  scroll_delay: 2
+  scroll_element: "div.content-feed"
+  item_selector: "div.post-card"
+  min_items: 100  # Stop after collecting at least 100 items
+
+extract:
+  posts:
+    type: group
+    multiple: true
+    container: "div.post-card"
+    fields:
+      author:
+        type: css
+        query: "a.user-name"
+      author_handle:
+        type: css
+        query: "span.user-handle"
+      post_text:
+        type: css
+        query: "div.post-content"
+      post_time:
+        type: css
+        query: "time.post-time"
+      likes:
+        type: css
+        query: "span.like-count"
+      shares:
+        type: css
+        query: "span.share-count"
+      comments:
+        type: css
+        query: "span.comment-count"
+      media:
+        type: css
+        query: "img.post-media"
+        attribute: src
+        multiple: true
+
+output_format: "json"
+output_dir: "social_media_data"
+```
+
+### Run Command
+
+```bash
+python crawl4ai_main.py -c configs/social_config.yaml
+```
+
+## Best Practices for Different Website Types
+
+### E-commerce Sites
+- Use `navigation_type: "pagination"` for product listings
+- Enable JavaScript rendering for modern sites
+- Focus on extracting rich product data including prices, ratings, and images
+- Consider extracting product IDs to follow up with API calls
+
+### News and Content Sites
+- Use `navigation_type: "links"` to follow article links
+- Extract structured content like author, publish date, and article body
+- Consider outputting to markdown format for better readability
+- Handle paywalls through proper login configuration
+
+### API-based Data Sources
+- Use `navigation_type: "api"` with multiple endpoints
+- Handle authentication tokens properly
+- Structure your endpoints to handle pagination parameters
+
+### Social Media and Dynamic Sites
+- Use scroll-based navigation for infinite scrolling pages
+- Enable stealth mode to avoid detection
+- Use longer delays between actions
+- Implement proper error handling for rate limiting

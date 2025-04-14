@@ -1,0 +1,43 @@
+# Proxy Configuration for Crawl4AI Scraper
+proxy:
+  enabled: true
+
+  # Sources for proxies - use one of the following options
+
+  # Option 1: List proxies directly
+  proxies:
+    - host: "proxy1.example.com"
+      port: 8080
+      username: "user1"
+      password: "pass1"
+    - host: "proxy2.example.com"
+      port: 8080
+      username: "user2"
+      password: "pass2"
+    - "http://user3:pass3@proxy3.example.com:8080"
+    - "proxy4.example.com:8080"
+
+  # Option 2: Load from file
+  # proxy_file: "proxies.json"  # or .txt with one proxy per line
+
+  # Option 3: Load from API
+  # proxy_api_url: "https://proxy-provider.com/api/proxies"
+  # proxy_api_key: "your_api_key_here"
+
+  # Rotation strategy: round_robin, random, or performance
+  rotation_strategy: "round_robin"
+
+  # URL to test proxy connectivity
+  test_url: "https://httpbin.org/ip"
+
+  # Maximum failures before marking a proxy as banned
+  max_failures: 3
+
+  # Minimum delay between proxy rotations (seconds)
+  min_delay_between_rotations: 5
+
+  # Test all proxies on startup
+  test_on_start: true
+
+  # Format URLs for HTTP clients automatically
+  format_url: true

@@ -1,0 +1,299 @@
+# Enhanced Crawl4AI Scraper Framework
+
+A powerful, intelligent web scraping framework with advanced features including proxy rotation, LLM-powered selector generation, and robust content extraction capabilities.
+
+![Crawl4AI Logo](https://via.placeholder.com/800x200?text=Enhanced+Crawl4AI+Scraper+Framework)
+
+## Overview
+
+The Enhanced Crawl4AI Scraper Framework provides an intelligent, adaptable approach to web scraping that can handle virtually any website without requiring custom code for each target. Key enhancements include:
+
+1. **Proxy Rotation**: Automatically rotate through a list of proxies to avoid IP blocking and rate limiting
+2. **LLM-Powered Selectors**: Use AI to dynamically generate and optimize CSS/XPath selectors
+3. **Stealth Browsing**: Advanced techniques to avoid bot detection
+4. **Configuration-Driven**: Declarative approach to define scraping strategy
+
+## Features
+
+- **Configuration-driven**: Define your scraping strategy in YAML or JSON
+- **Browser automation**: Powered by Playwright for JavaScript rendering
+- **Login support**: Handle authentication and maintain sessions
+- **Pagination**: Navigate through multi-page results
+- **Link following**: Traverse through website structures
+- **API integration**: Make direct API calls
+- **Stealth mode**: Avoid bot detection mechanisms
+- **Multiple output formats**: JSON, CSV, YAML, and Markdown
+- **Structured extraction**: Define complex data structures
+- **Cookie persistence**: Reuse sessions across runs
+- **Proxy rotation**: Avoid IP blocking with automatic proxy switching
+- **LLM-powered selectors**: Generate optimal selectors using AI
+- **Selector refinement**: Automatic testing and improvement of selectors
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/crawl4ai-scraper.git
+cd crawl4ai-scraper
+```
+
+2. Create a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+The requirements.txt should include the following dependencies:
+```
+playwright>=1.30.0
+beautifulsoup4>=4.10.0
+requests>=2.27.1
+pyyaml>=6.0
+lxml>=4.9.1
+markdown>=3.4.1
+asyncio>=3.4.3
+aiohttp>=3.8.1
+```
+
+4. Install Playwright browsers:
+```bash
+playwright install chromium
+```
+
+## Usage
+
+### Basic Command
+
+```bash
+python crawl4ai_main.py -c config/example_config.yaml
+```
+
+### Command Line Options
+
+- `-c, --config`: Path to configuration file (required)
+- `-o, --output`: Custom output filename
+- `-u, --url`: Override URL in configuration
+- `-v, --verbose`: Enable verbose logging
+- `--proxy`: Enable proxy rotation (even if disabled in config)
+- `--llm`: Enable LLM selector generation (even if disabled in config)
+- `--proxy-file`: Path to proxy list file (overrides config)
+- `--llm-key`: API key for LLM service (overrides config)
+- `--test-selectors`: Test selectors and display results without scraping
+
+## Proxy Rotation
+
+The proxy rotation feature helps avoid IP blocking by distributing requests across multiple proxies. Configure it in your YAML file:
+
+```yaml
+proxy:
+  enabled: true
+  proxies:
+    - host: "proxy1.example.com"
+      port: 8080
+      username: "user1"
+      password: "pass1"
+    - "proxy2.example.com:8080"
+  rotation_strategy: "round_robin"  # round_robin, random, or performance
+  test_url: "https://httpbin.org/ip"
+  max_failures: 3
+```
+
+You can also load proxies from a file or API:
+
+```yaml
+proxy:
+  enabled: true
+  proxy_file: "proxies.json"  # or .txt with one proxy per line
+  # OR
+  proxy_api_url: "https://proxy-provider.com/api/proxies"
+  proxy_api_key: "your_api_key_here"
+```
+
+## LLM Selector Generation
+
+The LLM selector feature uses AI to generate optimal CSS or XPath selectors for data extraction:
+
+```yaml
+llm_selectors:
+  enabled: true
+  llm_provider: "anthropic"  # anthropic or openai
+  llm_model: "claude-3-haiku-20240307"
+  generate_on_start: true
+
+# Define what to extract
+extraction_spec:
+  title: null
+  price: null
+  products:
+    - name
+    - price
+    - image_url
+```
+
+### How LLM Selector Generation Works
+
+1. The scraper loads the target webpage
+2. The HTML is analyzed by the LLM (Claude or GPT-4)
+3. The LLM generates optimal CSS/XPath selectors based on the extraction spec
+4. The selectors are tested on the actual page
+5. Failed selectors are refined with additional LLM guidance
+6. The final selectors are used for extraction
+
+This eliminates the need to manually create and maintain selectors, making the scraper more adaptive to website changes.
+
+## Configuration Examples
+
+### E-commerce with Proxy Rotation and LLM Selectors
+
+```yaml
+url: "https://example-store.com/products"
+render_js: true
+navigation_type: "pagination"
+pagination:
+  param: "page"
+  start: 1
+  end: 5
+
+# Enable proxy rotation
+proxy:
+  enabled: true
+  proxies:
+    - "proxy1.example.com:8080"
+    - "proxy2.example.com:8080"
+  rotation_strategy: "round_robin"
+
+# Enable LLM selector generation
+llm_selectors:
+  enabled: true
+  llm_provider: "anthropic"
+  llm_model: "claude-3-haiku-20240307"
+
+# Define what to extract
+extraction_spec:
+  products:
+    - name
+    - price
+    - image_url
+    - description
+
+output_format: "json"
+output_dir: "ecommerce_products"
+```
+
+### API Data Collection with Authentication
+
+```yaml
+url: "https://api-service.com/data"
+navigation_type: "api"
+endpoints:
+  - url: "https://api-service.com/api/users"
+    method: "GET"
+  - url: "https://api-service.com/api/products"
+    method: "GET"
+
+# Use a proxy for API calls
+proxy:
+  enabled: true
+  proxies:
+    - "api-proxy.example.com:8080"
+
+# Login configuration
+login:
+  enabled: true
+  url: "https://api-service.com/auth/login"
+  actions:
+    - type: fill
+      selector: "input#email"
+      value: "youremail@example.com"
+    - type: fill
+      selector: "input#password"
+      value: "yourpassword"
+    - type: click
+      selector: "button[type='submit']"
+
+output_format: "json"
+merge_results: false
+```
+
+## Advanced Topics
+
+### Proxy Performance Tracking
+
+The system tracks the performance of each proxy, including:
+- Success rate
+- Average response time
+- Failure count
+
+When using the "performance" rotation strategy, it automatically selects the best-performing proxies.
+
+### LLM Selector Caching
+
+Generated selectors are cached to avoid unnecessary LLM API calls:
+
+```yaml
+llm_selectors:
+  enabled: true
+  use_cache: true
+  cache_dir: "selector_cache"
+```
+
+### Selector Testing and Refinement
+
+The system automatically tests the generated selectors and refines them if they fail:
+
+```yaml
+llm_selectors:
+  enabled: true
+  test_selectors: true
+  max_refinement_attempts: 3
+```
+
+## Best Practices
+
+### Effective Proxy Usage
+
+1. **Use a mix of proxy types**: Datacenter, residential, and mobile proxies
+2. **Implement appropriate delays**: Add random delays between requests
+3. **Monitor proxy performance**: Regularly check success rates
+4. **Have fallback options**: Always have alternative proxies ready
+
+### Effective LLM Selector Generation
+
+1. **Be specific in your extraction spec**: Clearly define what data you need
+2. **Provide descriptive field names**: Use names that reflect the content
+3. **Use the caching feature**: Avoid unnecessary API calls
+4. **Consider webpage structure**: Group related items correctly
+
+## Troubleshooting
+
+### Common Proxy Issues
+
+- **All proxies banned**: Increase the proxy pool or add longer delays
+- **Slow performance**: Set a lower timeout value for proxies
+- **Authentication failures**: Verify proxy credentials
+
+### Common LLM Selector Issues
+
+- **Inaccurate selectors**: Provide more specific field names in the extraction spec
+- **Over-specific selectors**: Enable selector generalization with the `generalize_selectors: true` option
+- **LLM API failures**: Check your API key and ensure you have sufficient credits
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Playwright for browser automation
+- BeautifulSoup and lxml for HTML parsing
+- Anthropic's Claude and OpenAI's GPT-4 for intelligent selector generation
+- The open-source community for inspiration and components
