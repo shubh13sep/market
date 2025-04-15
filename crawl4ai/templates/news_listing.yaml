@@ -1,0 +1,30 @@
+extract:
+  articles:
+    container: div.article-card
+    fields:
+      date:
+        multiple: false
+        query: span.publish-date
+        type: css
+      snippet:
+        multiple: false
+        query: p.article-snippet
+        type: css
+      title:
+        multiple: false
+        query: h2.article-title
+        type: css
+      url:
+        attribute: href
+        multiple: false
+        query: a.article-link
+        type: css
+    multiple: true
+    type: group
+link_selector: a.article-title
+max_links: 20
+navigation_type: links
+output_format: json
+render_js: true
+stealth_mode: true
+url: ''

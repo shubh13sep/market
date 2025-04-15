@@ -1,0 +1,26 @@
+extract:
+  author:
+    multiple: false
+    query: span.author-name
+    type: css
+  content:
+    multiple: false
+    query: div.article-body
+    type: css
+  published_date:
+    multiple: false
+    query: time.publish-date
+    type: css
+  tags:
+    multiple: true
+    query: a.tag
+    type: css
+  title:
+    multiple: false
+    query: h1.article-title
+    type: css
+navigation_type: single
+output_format: markdown
+render_js: true
+stealth_mode: true
+url: ''

@@ -1,0 +1,8 @@
+endpoints:
+- method: GET
+  params: {}
+  url: ''
+navigation_type: api
+output_format: json
+parse_json: true
+url: ''

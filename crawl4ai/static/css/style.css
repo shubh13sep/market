@@ -1,0 +1,48 @@
+
+body {
+    background-color: #f7f9fc;
+}
+
+.navbar {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    border: none;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.CodeMirror {
+    height: calc(100vh - 200px);
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.validation-success {
+    color: #28a745;
+}
+
+.validation-failure {
+    color: #dc3545;
+}
+
+.selector-sample {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-style: italic;
+    color: #6c757d;
+}
+
+#siteInfo, #validationResults {
+    max-height: 300px;
+    overflow-y: auto;
+}
+    

@@ -11,7 +11,7 @@ from crawl4ai.crawl4ai_scraper import Crawl4AIScraper
 from crawl4ai.navigator import Crawl4AINavigator
 from crawl4ai.output_generator import Crawl4AIOutputGenerator
 from crawl4ai.proxy_manager import ProxyManager
-from crawl4ai.llm_selector_generator import LLMSelectorGenerator
+from crawl4ai.auto_config_generator.llm_selector_generator import LLMSelectorGenerator
 
 # Setup logging
 logging.basicConfig(

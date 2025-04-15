@@ -1,0 +1,34 @@
+extract:
+  products:
+    container: div.product-card
+    fields:
+      image:
+        attribute: src
+        multiple: false
+        query: img.product-image
+        type: css
+      name:
+        multiple: false
+        query: h3.product-name
+        type: css
+      price:
+        multiple: false
+        query: span.price
+        type: css
+      url:
+        attribute: href
+        multiple: false
+        query: a.product-link
+        type: css
+    multiple: true
+    type: group
+navigation_type: pagination
+output_format: json
+pagination:
+  end: 5
+  param: page
+  start: 1
+  step: 1
+render_js: true
+stealth_mode: true
+url: ''

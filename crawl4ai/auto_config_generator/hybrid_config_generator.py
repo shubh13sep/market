@@ -9,7 +9,7 @@ from typing import Dict, Any, List, Optional, Union
 from urllib.parse import urlparse
 
 # Import our modules
-from crawl4ai_scraper import Crawl4AIScraper
+from crawl4ai.crawl4ai_scraper import Crawl4AIScraper
 from llm_selector_generator import LLMSelectorGenerator
 from bs4 import BeautifulSoup
 

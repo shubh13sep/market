@@ -1,0 +1,31 @@
+extract:
+  description:
+    multiple: false
+    query: div.product-description
+    type: css
+  images:
+    attribute: src
+    multiple: true
+    query: img.product-image
+    type: css
+  price:
+    multiple: false
+    query: span.price
+    type: css
+  rating:
+    multiple: false
+    query: div.rating
+    type: css
+  reviews:
+    multiple: true
+    query: div.review-text
+    type: css
+  title:
+    multiple: false
+    query: h1.product-title
+    type: css
+navigation_type: single
+output_format: json
+render_js: true
+stealth_mode: true
+url: ''
