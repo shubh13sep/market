@@ -160,6 +160,8 @@ async def main_async():
     parser.add_argument("--ui", action="store_true", help="Start the web UI server")
     parser.add_argument("--port", type=int, default=8000, help="Port for the web UI server")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode for troubleshooting")
+    parser.add_argument("--wait-timeout", type=int, default=1800, help="Timeout in seconds for waiting for selections")
+    parser.add_argument("--json-input", help="Path to a JSON file with selections (bypasses browser selection)")
 
     # LLM options
     parser.add_argument("--llm-key", help="API key for LLM service (for selector optimization)")
@@ -173,24 +175,75 @@ async def main_async():
         logging.getLogger().setLevel(logging.DEBUG)
         logger.info("Debug mode enabled")
 
+    # Check for JSON input file
+    selections = None
+    if args.json_input and os.path.exists(args.json_input):
+        try:
+            with open(args.json_input, 'r') as f:
+                selections = json.load(f)
+            logger.info(f"Loaded {len(selections)} selections from {args.json_input}")
+        except Exception as e:
+            logger.error(f"Error loading selections from {args.json_input}: {e}")
+            if args.debug:
+                import traceback
+                traceback.print_exc()
+
     if args.ui:
         # Start the web UI server
         print(f"\n🚀 Starting Crawl4AI Configuration UI server on port {args.port}...")
         print(f"🌐 Open your browser at: http://localhost:{args.port}\n")
         start_ui_server(args.port)
     elif args.url:
-        # Generate configuration using browser-based selector
-        print(f"\n🚀 Starting browser-based configuration generator for {args.url}")
-        print("This will open a browser window for you to select elements")
+        # If we have a URL but no selections from JSON, do browser-based selection
+        if selections is None:
+            # Generate configuration using browser-based selector
+            print(f"\n🚀 Starting browser-based configuration generator for {args.url}")
+            print("This will open a browser window for you to select elements")
 
-        config = await generate_config_with_browser(
-            url=args.url,
-            output_path=args.output,
-            llm_api_key=args.llm_key,
-            llm_provider=args.llm_provider,
-            llm_model=args.llm_model,
-            debug=args.debug
-        )
+            config = await generate_config_with_browser(
+                url=args.url,
+                output_path=args.output,
+                llm_api_key=args.llm_key,
+                llm_provider=args.llm_provider,
+                llm_model=args.llm_model,
+                debug=args.debug
+            )
+        else:
+            # Use the selections from the JSON file
+            print(f"\n🔍 Using selections from {args.json_input} for {args.url}")
+
+            # Initialize the element selector to create a config from the selections
+            async with BrowserElementSelector() as selector:
+                # Just navigate to the URL to get headers
+                success = await selector.load_page(args.url, debug=args.debug)
+
+                if not success:
+                    logger.error(f"Failed to load URL: {args.url}")
+                    return
+
+                # Create configuration from selections
+                print("\n⚙️ Creating configuration from selections...")
+                config = await selector.create_config_from_selections(selections)
+
+                # Optionally optimize selectors with LLM
+                if args.llm_key:
+                    print("\n🧠 Optimizing selectors with LLM...")
+
+                    # Initialize generator
+                    generator = AutoConfigGenerator(
+                        llm_api_key=args.llm_key,
+                        llm_provider=args.llm_provider,
+                        llm_model=args.llm_model
+                    )
+
+                    # Optimize selectors
+                    config = await generator.generate_complete_config(args.url, config["extract"], optimize=True)
+
+                # Save configuration if output path is provided
+                if args.output:
+                    print(f"\n💾 Saving configuration to {args.output}...")
+                    await selector.save_config_to_file(config, args.output)
+                    print(f"Configuration saved successfully to {args.output}")
 
         if not args.output and config:
             # Print configuration to console

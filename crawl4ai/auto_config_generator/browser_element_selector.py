@@ -12,6 +12,160 @@ import yaml
 from bs4 import BeautifulSoup
 
 
+async def open_element_selector(self) -> Dict[str, Dict[str, Any]]:
+    """
+    Open the interactive element selector and wait for user selections.
+
+    Returns:
+        Dict[str, Dict[str, Any]]: Dictionary of selected elements
+    """
+    if not self.page:
+        raise ValueError("Page not loaded. Call load_page() first.")
+
+    # Create a promise that will be resolved when selections are made
+    selections_future = asyncio.Future()
+    ready_future = asyncio.Future()
+    close_future = asyncio.Future()
+
+    self.selections_future = selections_future  # Store as instance variable
+    self.ready_future = ready_future  # Store as instance variable
+    self.close_future = close_future  # Store as instance variable
+
+    # Expose function to receive selections from the page
+    async def handle_selections(selections_str):
+        try:
+            print(f"Received selections from browser: {selections_str[:100]}...")
+
+            # Parse the JSON string to get the selections object
+            selections = {}
+            if isinstance(selections_str, str):
+                selections = json.loads(selections_str)
+            elif isinstance(selections_str, dict):
+                selections = selections_str
+
+            print(f"Parsed {len(selections)} element selections")
+
+            # Check if future is already done (to prevent invalid state error)
+            if not selections_future.done():
+                selections_future.set_result(selections)
+            else:
+                print("Warning: Future already resolved, ignoring duplicate selection")
+        except Exception as e:
+            print(f"Error processing selections: {e}")
+            import traceback
+            traceback.print_exc()
+
+            # Only set exception if future isn't done yet
+            if not selections_future.done():
+                selections_future.set_exception(e)
+
+    # Expose function to know when the tool is ready
+    async def handle_ready():
+        print("Element selector tool is ready!")
+
+        if not ready_future.done():
+            ready_future.set_result(True)
+
+    # Expose function to handle closing
+    async def handle_close():
+        print("Element selector is being closed")
+
+        if not close_future.done():
+            close_future.set_result(True)
+
+        # If selections weren't received, set a default empty result
+        if not selections_future.done():
+            selections_future.set_result({})
+
+    # Expose functions to the page
+    await self.page.expose_function("saveElementSelections", handle_selections)
+    await self.page.expose_function("notifySelectorReady", handle_ready)
+    await self.page.expose_function("closeSelectorTool", handle_close)
+
+    # Wait for the tool to be ready
+    try:
+        # Add a timeout to the ready future
+        print("Waiting for element selector to initialize...")
+        ready_timeout = 30  # 30 seconds
+
+        # Add periodic checking with console logs to detect ready state
+        for i in range(ready_timeout * 2):  # Check every 0.5 seconds
+            if ready_future.done():
+                break
+
+            # Check if ready via JavaScript evaluation
+            if i % 4 == 0:  # Every 2 seconds
+                try:
+                    toolbar_exists = await self.page.evaluate("!!document.getElementById('crawl4ai-toolbar')")
+                    if toolbar_exists:
+                        print("Detected toolbar element - selector appears to be ready")
+                        if not ready_future.done():
+                            ready_future.set_result(True)
+                        break
+                except Exception as e:
+                    print(f"Error checking ready state: {e}")
+
+            await asyncio.sleep(0.5)
+
+        if not ready_future.done():
+            print("Ready state not detected within timeout")
+            ready_future.set_result(False)
+
+        # Only proceed if ready state was detected
+        if await ready_future:
+            print("\n*******************************************")
+            print("* Element selector is ready!")
+            print("* - Use the toolbar in the top-right corner")
+            print("* - Click 'Select Element' to start selecting")
+            print("* - When finished, click 'Generate Config'")
+            print("*******************************************\n")
+
+            # Wait for either selections or close
+            max_wait_time = 1800  # 30 minutes timeout
+            print(f"Waiting for selections (timeout: {max_wait_time}s)...")
+
+            try:
+                # Wait for either selections or close with timeout
+                done, pending = await asyncio.wait(
+                    [selections_future, close_future],
+                    return_when=asyncio.FIRST_COMPLETED,
+                    timeout=max_wait_time
+                )
+
+                # Cancel any pending futures
+                for future in pending:
+                    future.cancel()
+
+                if selections_future in done and selections_future.done():
+                    try:
+                        selections = selections_future.result()
+                        print(f"Received selections: {selections.keys()}")
+                        return selections
+                    except Exception as e:
+                        print(f"Error retrieving selections: {e}")
+                        return {}
+                elif close_future in done:
+                    print("Selector was closed without making selections")
+                    return {}
+                else:
+                    print("No selections received within timeout")
+                    return {}
+
+            except asyncio.TimeoutError:
+                print(f"Selection process timed out after {max_wait_time} seconds")
+                return {}
+        else:
+            print("Element selector failed to initialize properly")
+            return {}
+
+    except Exception as e:
+        print(f"Error during element selection: {e}")
+        import traceback
+        traceback.print_exc()
+        return {}
+        import asyncio
+
+
 class BrowserElementSelector:
     """
     Browser-based element selector that allows users to visually select elements
@@ -303,6 +457,18 @@ class BrowserElementSelector:
                     document.getElementById('crawl4ai-select-btn').addEventListener('click', toggleSelector);
                     document.getElementById('crawl4ai-config-btn').addEventListener('click', generateConfig);
                     document.getElementById('crawl4ai-close-btn').addEventListener('click', closeTool);
+
+                    // Signal that we're ready
+                    if (window.notifySelectorReady) {
+                        console.log("Notifying Python that selector is ready");
+                        try {
+                            window.notifySelectorReady();
+                        } catch (e) {
+                            console.error("Error notifying ready state:", e);
+                        }
+                    } else {
+                        console.warn("notifySelectorReady function not available");
+                    }
                 }
 
                 // Generate unique CSS selector for an element
@@ -696,6 +862,8 @@ class BrowserElementSelector:
                     }
 
                     try {
+                        console.log("Generating configuration from selections:", selectedElements);
+
                         // First create a backup file download in case the communication fails
                         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedElements, null, 2));
                         const downloadAnchorNode = document.createElement('a');
@@ -704,19 +872,20 @@ class BrowserElementSelector:
                         document.body.appendChild(downloadAnchorNode);
 
                         // Notify parent window that config is ready
-                        console.log('Attempting to save element selections...');
-                        console.log('Selected elements:', selectedElements);
-
                         if (typeof window.saveElementSelections === 'function') {
                             try {
                                 // Convert the object to a JSON string to avoid serialization issues
                                 const selectionsJson = JSON.stringify(selectedElements);
-                                console.log('Calling saveElementSelections with JSON string...');
+                                console.log('Sending selections to Python backend...');
                                 window.saveElementSelections(selectionsJson);
-                                console.log('Successfully sent selections to Python backend');
+                                console.log('Sent selections to Python backend');
+
+                                // Trigger the download as backup
+                                downloadAnchorNode.click();
+                                downloadAnchorNode.remove();
 
                                 // Show confirmation
-                                alert('Configuration generated successfully! You can close this window.');
+                                alert('Configuration generated successfully! A backup JSON file has also been downloaded.');
                             } catch (err) {
                                 console.error('Error sending selections to Python:', err);
 
@@ -753,7 +922,14 @@ class BrowserElementSelector:
 
                     // Notify parent window
                     if (window.closeSelectorTool) {
-                        window.closeSelectorTool();
+                        try {
+                            window.closeSelectorTool();
+                            console.log("Notified Python that selector tool is closing");
+                        } catch (e) {
+                            console.error("Error notifying selector tool close:", e);
+                        }
+                    } else {
+                        console.warn("closeSelectorTool function not available");
                     }
                 }
 
@@ -827,12 +1003,22 @@ class BrowserElementSelector:
                 // Initialize
                 createToolbar();
 
-                // Send ready message to parent
-                if (window.notifySelectorReady) {
-                    window.notifySelectorReady();
-                }
+                // Set a timeout to ensure we notify that we're ready
+                setTimeout(function() {
+                    if (window.notifySelectorReady) {
+                        console.log("Sending delayed ready notification");
+                        try {
+                            window.notifySelectorReady();
+                        } catch (e) {
+                            console.error("Error sending delayed ready notification:", e);
+                        }
+                    }
+                }, 1000);
             })();
         """)
+
+        # Wait a moment to ensure the script is properly initialized
+        await asyncio.sleep(1)
 
         return True
 
