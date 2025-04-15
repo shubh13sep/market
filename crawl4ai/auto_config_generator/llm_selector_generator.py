@@ -100,6 +100,8 @@ class LLMSelectorGenerator:
             selectors = await self._generate_selectors_with_anthropic(url, prepared_html, extraction_targets)
         elif self.llm_provider == 'openai':
             selectors = await self._generate_selectors_with_openai(url, prepared_html, extraction_targets)
+        elif self.llm_provider == 'google':
+            selectors = await self._generate_selectors_with_google(url, prepared_html, extraction_targets)
         else:
             logger.error(f"Unsupported LLM provider: {self.llm_provider}")
             selectors = {}
@@ -145,6 +147,124 @@ class LLMSelectorGenerator:
 
         return html
 
+    async def _generate_selectors_with_google(self, url: str, html: str, extraction_targets: List[str]) -> Dict[
+        str, str]:
+        """
+        Generate selectors using Google Gemini API.
+
+        Args:
+            url: URL of the page
+            html: Prepared HTML content
+            extraction_targets: List of data elements to extract
+
+        Returns:
+            Dict[str, str]: Dictionary of generated selectors
+        """
+        if not self.llm_api_key:
+            logger.error("No API key provided for Google Gemini")
+            return {}
+
+        # API URL for Google Gemini
+        #api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent"
+        api_url = "https://openrouter.ai/api/v1"
+        # Create the prompt for Gemini
+        system_prompt = """You are an expert at web scraping and CSS/XPath selector generation. 
+    Your task is to analyze HTML and create reliable CSS selectors for extracting specific information.
+    Generate selectors that are both robust and precise. Prefer CSS selectors when possible.
+    Your response MUST be valid JSON without any additional explanation text."""
+
+        user_prompt = f"""Here's the HTML from {url}. 
+    I need to extract the following information:
+    {', '.join(extraction_targets)}
+
+    Please provide a JSON object with the best selectors for each extraction target.
+    The JSON should have each target as a key, mapped to an object with the selector configuration.
+
+    For example:
+    ```json
+    {{
+      "product_name": {{
+        "type": "css",
+        "query": "h1.product-title",
+        "multiple": false
+      }},
+      "price": {{
+        "type": "css",
+        "query": "span.price-amount",
+        "multiple": false
+      }}
+    }}
+    ```
+
+    Here's the HTML:
+    ```html
+    {html}
+    ```
+
+    Return ONLY the JSON object with no additional explanations."""
+
+        # Prepare the API request
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": self.llm_api_key
+        }
+
+        data = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {
+                            "text": system_prompt + "\n\n" + user_prompt
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.1,  # Low temperature for deterministic output
+                "maxOutputTokens": 2000
+            }
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                        f"{api_url}?key={self.llm_api_key}",
+                        headers=headers,
+                        json=data
+                ) as response:
+                    if response.status == 200:
+                        response_data = await response.json()
+
+                        # Extract the content from Gemini response
+                        if 'candidates' in response_data and len(response_data['candidates']) > 0:
+                            content = response_data['candidates'][0]['content']['parts'][0]['text']
+
+                            # Extract the JSON from the response
+                            json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
+                            if json_match:
+                                json_text = json_match.group(1)
+                            else:
+                                json_text = content  # Assume the entire text is JSON
+
+                            try:
+                                selectors = json.loads(json_text)
+                                logger.info(f"Successfully generated {len(selectors)} selectors with Google Gemini")
+                                return selectors
+                            except json.JSONDecodeError as e:
+                                logger.error(f"Error parsing JSON from Gemini response: {e}")
+                                logger.debug(f"Raw response: {content}")
+                                return {}
+                        else:
+                            logger.error("No candidates in Gemini response")
+                            return {}
+                    else:
+                        error_text = await response.text()
+                        logger.error(f"Error from Gemini API ({response.status}): {error_text}")
+                        return {}
+        except Exception as e:
+            logger.error(f"Exception calling Gemini API: {e}")
+            return {}
 
     async def _generate_selectors_with_anthropic(self, url: str, html: str, extraction_targets: List[str]) -> Dict[
         str, str]:

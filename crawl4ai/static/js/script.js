@@ -1,3 +1,8 @@
+<select class="form-select" id="llmProvider" name="llm_provider">
+  <option value="google">Google Gemini</option>
+  <option value="anthropic">Anthropic Claude</option>
+  <option value="openai">OpenAI GPT</option>
+</select>
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize CodeMirror
