@@ -1579,6 +1579,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 # Main function to run the automatic config generator
+#python -m crawl4ai.auto_config_generator.crawl4ai_auto_config --ui
 async def main():
     parser = argparse.ArgumentParser(description="Automatic Crawl4AI Configuration Generator")
     parser.add_argument("--url", help="URL to generate configuration for")

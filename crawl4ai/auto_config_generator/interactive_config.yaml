@@ -1,0 +1,32 @@
+extract:
+  Page:
+    container: body > center > table > tbody > tr:nth-child(3) > td > table
+    fields:
+      Source:
+        multiple: false
+        query: body > center > table > tbody > tr:nth-child(3) > td > table > tbody
+          > tr.athing.submission:nth-child(1) > td.title:nth-child(3) > span.titleline
+          > span.sitebit.comhead > a > span.sitestr
+        type: css
+      Title:
+        multiple: false
+        query: body > center > table > tbody > tr:nth-child(3) > td > table > tbody
+          > tr.athing.submission:nth-child(1) > td.title:nth-child(3) > span.titleline
+          > a
+        type: css
+    multiple: true
+    type: group
+headers:
+  Accept: '*/*'
+  Accept-Language: en-US,en;q=0.9
+  Referer: https://news.ycombinator.com/
+  User-Agent: ''
+  sec-ch-ua: '"Not:A-Brand";v="24", "Chromium";v="134"'
+  sec-ch-ua-mobile: ?0
+  sec-ch-ua-platform: '"macOS"'
+  upgrade-insecure-requests: '1'
+output_dir: output
+output_format: json
+render_js: false
+stealth_mode: true
+url: https://news.ycombinator.com/

@@ -71,9 +71,9 @@ async def scrape_with_auto_config():
 
         # Print results
         print("\nScraped Data:")
-        print("-" * 40)
+        print("-" * 400)
         pprint(data)
-        print("-" * 40)
+        print("-" * 400)
 
         # Save results
         output_generator = Crawl4AIOutputGenerator(config)

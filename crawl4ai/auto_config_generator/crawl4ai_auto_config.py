@@ -147,7 +147,12 @@ def start_ui_server(port: int = 8000):
         port: Port to run the server on
     """
     ui = ElementSelectorUI()
-    ui.run(port=port)
+
+    # Instead of ui.run(port=port), use:
+    import uvicorn
+    config = uvicorn.Config(ui.app, host="0.0.0.0", port=port)
+    server = uvicorn.Server(config)
+    return server.serve()
 
 
 async def main_async():
@@ -192,7 +197,7 @@ async def main_async():
         # Start the web UI server
         print(f"\n🚀 Starting Crawl4AI Configuration UI server on port {args.port}...")
         print(f"🌐 Open your browser at: http://localhost:{args.port}\n")
-        start_ui_server(args.port)
+        await start_ui_server(args.port)
     elif args.url:
         # If we have a URL but no selections from JSON, do browser-based selection
         if selections is None:

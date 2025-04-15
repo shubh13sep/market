@@ -1,0 +1,64 @@
+
+body {
+    background-color: #f7f9fc;
+}
+
+.navbar {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    border: none;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.CodeMirror {
+    height: calc(100vh - 200px);
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+#pageFrame {
+    height: calc(100vh - 200px);
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+#iframeContainer {
+    height: calc(100vh - 200px);
+}
+
+.highlight-element {
+    outline: 2px dashed #007bff !important;
+    background-color: rgba(0, 123, 255, 0.1) !important;
+}
+
+.selection-item {
+    border-left: 3px solid #007bff;
+}
+
+.field-item {
+    border-left: 3px solid #28a745;
+    margin-left: 15px;
+}
+
+.group-fields-container {
+    margin-left: 15px;
+    border-left: 1px dashed #ccc;
+    padding-left: 10px;
+}
+
+.validation-success {
+    color: #28a745;
+}
+
+.validation-failure {
+    color: #dc3545;
+}
+            

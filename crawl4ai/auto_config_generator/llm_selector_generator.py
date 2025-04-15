@@ -145,6 +145,7 @@ class LLMSelectorGenerator:
 
         return html
 
+
     async def _generate_selectors_with_anthropic(self, url: str, html: str, extraction_targets: List[str]) -> Dict[
         str, str]:
         """
@@ -251,6 +252,7 @@ Return ONLY the JSON object with no additional explanations."""
         except Exception as e:
             logger.error(f"Exception calling Claude API: {e}")
             return {}
+
 
     async def _generate_selectors_with_openai(self, url: str, html: str, extraction_targets: List[str]) -> Dict[
         str, str]:

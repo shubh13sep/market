@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 
 # Import our modules
 from crawl4ai.crawl4ai_scraper import Crawl4AIScraper
-from llm_selector_generator import LLMSelectorGenerator
+from crawl4ai.auto_config_generator.llm_selector_generator import LLMSelectorGenerator
 from bs4 import BeautifulSoup
 
 # Setup logging
