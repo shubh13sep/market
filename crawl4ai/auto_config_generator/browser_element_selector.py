@@ -1,4 +1,3 @@
-import asyncio
 import json
 import tempfile
 import webbrowser
@@ -7,6 +6,7 @@ import base64
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Union
 
+import asyncio
 from playwright.async_api import async_playwright, ElementHandle, Page
 import yaml
 from bs4 import BeautifulSoup
@@ -21,7 +21,7 @@ async def open_element_selector(self) -> Dict[str, Dict[str, Any]]:
     """
     if not self.page:
         raise ValueError("Page not loaded. Call load_page() first.")
-
+    import asyncio
     # Create a promise that will be resolved when selections are made
     selections_future = asyncio.Future()
     ready_future = asyncio.Future()
@@ -81,7 +81,7 @@ async def open_element_selector(self) -> Dict[str, Dict[str, Any]]:
     await self.page.expose_function("saveElementSelections", handle_selections)
     await self.page.expose_function("notifySelectorReady", handle_ready)
     await self.page.expose_function("closeSelectorTool", handle_close)
-
+    import asyncio
     # Wait for the tool to be ready
     try:
         # Add a timeout to the ready future
@@ -163,7 +163,6 @@ async def open_element_selector(self) -> Dict[str, Dict[str, Any]]:
         import traceback
         traceback.print_exc()
         return {}
-        import asyncio
 
 
 class BrowserElementSelector:
@@ -174,6 +173,7 @@ class BrowserElementSelector:
 
     def __init__(self):
         """Initialize the element selector."""
+        self.selections_future = None
         self.page = None
         self.browser = None
         self.context = None
@@ -231,10 +231,34 @@ class BrowserElementSelector:
             # Create a new page
             self.page = await self.context.new_page()
 
-            # Enable console logging if debug is enabled
-            if debug:
-                self.page.on("console", lambda msg: print(f"BROWSER CONSOLE: {msg.text}"))
-                print("Browser console logging enabled for debugging")
+            self.page.on("console", lambda msg: print(f"BROWSER CONSOLE: {msg.text}"))
+            print("Browser console logging enabled for debugging")
+
+            # Define the handlers
+            async def handle_ready():
+                print("Element selector ready notification received!")
+                # Signal ready to any waiting code
+                if hasattr(self, 'ready_future') and self.ready_future and not self.ready_future.done():
+                    self.ready_future.set_result(True)
+
+            async def handle_selections(data):
+                print(f"Received selections data: {str(data)[:100]}...")
+                # Store selections for later use
+                if hasattr(self, 'selections_future') and self.selections_future and not self.selections_future.done():
+                    if isinstance(data, str):
+                        data = json.loads(data)
+                    self.selections_future.set_result(data)
+
+            async def handle_close():
+                print("Close notification received")
+                if hasattr(self, 'close_future') and self.close_future and not self.close_future.done():
+                    self.close_future.set_result(True)
+
+
+            # Expose the functions
+            # await self.page.expose_function("notifySelectorReady", handle_ready)
+            # await self.page.expose_function("saveElementSelections", handle_selections)
+            # await self.page.expose_function("closeSelectorTool", handle_close)
 
             # Setup header capture
             await self._setup_header_capture()
@@ -432,12 +456,14 @@ class BrowserElementSelector:
         await self.page.add_script_tag(content="""
             // Crawl4AI element selector tool
             (function() {
+                console.log("Initializing Crawl4AI element selector...");
                 let isSelecting = false;
                 let hoveredElement = null;
                 let selectedElements = {};
 
                 // Create toolbar
                 function createToolbar() {
+                    console.log("Creating toolbar...");
                     const toolbar = document.createElement('div');
                     toolbar.id = 'crawl4ai-toolbar';
                     toolbar.innerHTML = `
@@ -459,7 +485,7 @@ class BrowserElementSelector:
                     document.getElementById('crawl4ai-close-btn').addEventListener('click', closeTool);
 
                     // Signal that we're ready
-                    if (window.notifySelectorReady) {
+                    if (typeof window.notifySelectorReady === 'function') {
                         console.log("Notifying Python that selector is ready");
                         try {
                             window.notifySelectorReady();
@@ -468,6 +494,23 @@ class BrowserElementSelector:
                         }
                     } else {
                         console.warn("notifySelectorReady function not available");
+                        // Fallback: try to make window.notifySelectorReady available
+                        let checkReadyFunctionInterval = setInterval(() => {
+                            if (typeof window.notifySelectorReady === 'function') {
+                                console.log("Found notifySelectorReady, notifying ready state");
+                                try {
+                                    window.notifySelectorReady();
+                                    clearInterval(checkReadyFunctionInterval);
+                                } catch (e) {
+                                    console.error("Error in interval notifying ready state:", e);
+                                }
+                            }
+                        }, 500);
+
+                        // Stop checking after 10 seconds
+                        setTimeout(() => {
+                            clearInterval(checkReadyFunctionInterval);
+                        }, 10000);
                     }
                 }
 
@@ -874,11 +917,11 @@ class BrowserElementSelector:
                         // Notify parent window that config is ready
                         if (typeof window.saveElementSelections === 'function') {
                             try {
+                                console.log('Sending JSON with selections to Python backend');
                                 // Convert the object to a JSON string to avoid serialization issues
                                 const selectionsJson = JSON.stringify(selectedElements);
-                                console.log('Sending selections to Python backend...');
                                 window.saveElementSelections(selectionsJson);
-                                console.log('Sent selections to Python backend');
+                                console.log('Sent selections to Python backend:', selectionsJson.substring(0, 100) + '...');
 
                                 // Trigger the download as backup
                                 downloadAnchorNode.click();
@@ -897,6 +940,18 @@ class BrowserElementSelector:
                             }
                         } else {
                             console.warn('saveElementSelections function not available, using fallback');
+                            console.log('Functions available on window:', Object.keys(window).filter(k => typeof window[k] === 'function'));
+
+                            // Try using a more direct approach with postMessage
+                            try {
+                                window.parent.postMessage({
+                                    type: 'saveElementSelections',
+                                    selections: selectedElements
+                                }, '*');
+                                console.log('Sent selections via postMessage');
+                            } catch (e) {
+                                console.error('Error sending via postMessage:', e);
+                            }
 
                             // Trigger the backup file download
                             downloadAnchorNode.click();
@@ -1005,13 +1060,15 @@ class BrowserElementSelector:
 
                 // Set a timeout to ensure we notify that we're ready
                 setTimeout(function() {
-                    if (window.notifySelectorReady) {
+                    if (typeof window.notifySelectorReady === 'function') {
                         console.log("Sending delayed ready notification");
                         try {
                             window.notifySelectorReady();
                         } catch (e) {
                             console.error("Error sending delayed ready notification:", e);
                         }
+                    } else {
+                        console.warn("notifySelectorReady function not available after timeout");
                     }
                 }, 1000);
             })();

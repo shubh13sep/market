@@ -268,17 +268,42 @@ class AutoConfigGenerator:
             Dict[str, Any]: Complete configuration
         """
         logger.info(f"Generating complete configuration for {url}")
+        logger.info(f"Received selectors: {selectors.keys() if selectors else 'None'}")
 
         # Capture headers if not already done
         if not self.captured_headers:
             await self.capture_headers(url)
 
+        # If selectors is empty or None, try to get them from ui_selections
+        if not selectors and hasattr(self, 'ui_selections') and self.ui_selections:
+            logger.info(f"Using cached UI selections: {self.ui_selections.keys()}")
+            selectors = await self.generate_selectors_from_ui_selections(self.ui_selections)
+
+        # If still no selectors, use a fallback selector
+        if not selectors:
+            logger.warning("No selectors available, using fallback selectors")
+            selectors = {
+                "content": {
+                    "type": "css",
+                    "query": "body",
+                    "multiple": False
+                }
+            }
+
         # Optimize selectors if requested
-        if optimize and self.llm_api_key:
-            selectors = await self.optimize_selectors_with_llm(selectors)
+        if optimize and self.llm_api_key and selectors:
+            try:
+                optimized = await self.optimize_selectors_with_llm(selectors)
+                if optimized:
+                    selectors = optimized
+                    logger.info("Successfully optimized selectors with LLM")
+            except Exception as e:
+                logger.error(f"Error optimizing selectors: {e}")
+                # Continue with original selectors
 
         # Detect site type
         site_type = await self.config_generator.detect_site_type(url)
+        logger.info(f"Detected site type: {site_type}")
 
         # Load template based on site type
         config = await self.config_generator.load_template(site_type)
@@ -313,7 +338,9 @@ class AutoConfigGenerator:
         if "output_dir" not in config:
             config["output_dir"] = "output"
 
+        logger.info(f"Generated complete configuration with {len(selectors)} selectors")
         return config
+
 
     async def validate_config(self, config: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         """
@@ -1423,39 +1450,76 @@ document.addEventListener('DOMContentLoaded', function() {
             url = data.get("url")
             selections = data.get("selections", {})
 
-            if not url or not selections:
+            logger.info(f"Received API request to generate config for URL: {url}")
+            logger.info(f"Received {len(selections)} selections")
+
+            if not url:
                 return JSONResponse(
                     status_code=400,
-                    content={"error": "URL and selections are required"}
+                    content={"error": "URL is required"}
                 )
+
+            if not selections:
+                logger.warning("No selections provided in request")
+                # Check if we have any cached selections
+                if hasattr(self, 'ui_selections') and self.ui_selections:
+                    logger.info(f"Using {len(self.ui_selections)} cached selections")
+                    selections = self.ui_selections
+                else:
+                    # Create a minimal fallback selection
+                    logger.warning("Using fallback selection for entire page content")
+                    selections = {
+                        "page_content": {
+                            "selector": "body",
+                            "isGroup": False,
+                            "isMultiple": False
+                        }
+                    }
 
             if not self.config_generator:
-                return JSONResponse(
-                    status_code=400,
-                    content={"error": "Please prepare the page first"}
+                logger.info("Initializing config generator")
+                self.config_generator = AutoConfigGenerator(
+                    llm_api_key=None,  # Don't use LLM for fallback
+                    llm_provider="anthropic",
+                    llm_model="claude-3-haiku-20240307"
                 )
+                await self.config_generator.capture_headers(url)
 
-            # Generate selectors from UI selections
-            selectors = await self.config_generator.generate_selectors_from_ui_selections(selections)
+            # Save selections for potential reuse
+            self.ui_selections = selections
 
-            # Generate complete config
-            config = await self.config_generator.generate_complete_config(url, selectors)
+            try:
+                # Generate selectors from UI selections
+                logger.info("Generating selectors from UI selections")
+                selectors = await self.config_generator.generate_selectors_from_ui_selections(selections)
 
-            # Validate config
-            validation_results = await self.config_generator.validate_config(config)
+                # Generate complete config
+                logger.info("Generating complete config")
+                config = await self.config_generator.generate_complete_config(url, selectors)
 
-            # Convert config to YAML
-            yaml_config = yaml.dump(config, default_flow_style=False)
+                # Validate config
+                logger.info("Validating config")
+                validation_results = await self.config_generator.validate_config(config)
 
-            # Save current config for later use
-            self.current_config = config
-            self.validation_results = validation_results
+                # Convert config to YAML
+                yaml_config = yaml.dump(config, default_flow_style=False)
 
-            return JSONResponse(content={
-                "config": config,
-                "yaml_config": yaml_config,
-                "validation_results": validation_results
-            })
+                # Save current config for later use
+                self.current_config = config
+                self.validation_results = validation_results
+
+                logger.info("Config generation successful")
+                return JSONResponse(content={
+                    "config": config,
+                    "yaml_config": yaml_config,
+                    "validation_results": validation_results
+                })
+            except Exception as e:
+                logger.error(f"Error generating config: {e}", exc_info=True)
+                return JSONResponse(
+                    status_code=500,
+                    content={"error": f"Error generating configuration: {str(e)}"}
+                )
 
         # API: Save config
         @self.app.post("/api/save-config")
