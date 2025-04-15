@@ -695,27 +695,49 @@ class BrowserElementSelector:
                         return;
                     }
 
-                    // Notify parent window that config is ready
-                    if (window.saveElementSelections) {
-                        // Call the exposed function to save selections
-                        window.saveElementSelections(JSON.stringify(selectedElements));
-
-                        // Show confirmation
-                        alert('Configuration generated successfully! You can close this window.');
-                    } else {
-                        // Fallback if function not available
-                        console.log('Selected elements:', selectedElements);
-
-                        // Create a downloadable JSON file as fallback
+                    try {
+                        // First create a backup file download in case the communication fails
                         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedElements, null, 2));
                         const downloadAnchorNode = document.createElement('a');
                         downloadAnchorNode.setAttribute("href", dataStr);
                         downloadAnchorNode.setAttribute("download", "crawl4ai_selections.json");
                         document.body.appendChild(downloadAnchorNode);
-                        downloadAnchorNode.click();
-                        downloadAnchorNode.remove();
 
-                        alert('Configuration generated! A JSON file with your selections has been downloaded.');
+                        // Notify parent window that config is ready
+                        console.log('Attempting to save element selections...');
+                        console.log('Selected elements:', selectedElements);
+
+                        if (typeof window.saveElementSelections === 'function') {
+                            try {
+                                // Convert the object to a JSON string to avoid serialization issues
+                                const selectionsJson = JSON.stringify(selectedElements);
+                                console.log('Calling saveElementSelections with JSON string...');
+                                window.saveElementSelections(selectionsJson);
+                                console.log('Successfully sent selections to Python backend');
+
+                                // Show confirmation
+                                alert('Configuration generated successfully! You can close this window.');
+                            } catch (err) {
+                                console.error('Error sending selections to Python:', err);
+
+                                // Trigger the backup file download
+                                downloadAnchorNode.click();
+                                downloadAnchorNode.remove();
+
+                                alert('Error sending selections to Python. A backup JSON file has been downloaded.');
+                            }
+                        } else {
+                            console.warn('saveElementSelections function not available, using fallback');
+
+                            // Trigger the backup file download
+                            downloadAnchorNode.click();
+                            downloadAnchorNode.remove();
+
+                            alert('Configuration generated! A JSON file with your selections has been downloaded.');
+                        }
+                    } catch (error) {
+                        console.error('Error generating configuration:', error);
+                        alert('Error generating configuration: ' + error.message);
                     }
                 }
 
@@ -849,6 +871,7 @@ class BrowserElementSelector:
 
         # Create a promise that will be resolved when selections are made
         selections_future = asyncio.Future()
+        self.selections_future = selections_future  # Store as instance variable
 
         # Expose function to receive selections from the page
         async def handle_selections(selections_str):
@@ -856,10 +879,17 @@ class BrowserElementSelector:
                 # Parse the JSON string to get the selections object
                 selections = json.loads(selections_str) if isinstance(selections_str, str) else selections_str
                 print(f"Received {len(selections)} element selections")
-                selections_future.set_result(selections)
+
+                # Check if future is already done (to prevent invalid state error)
+                if not selections_future.done():
+                    selections_future.set_result(selections)
+                else:
+                    print("Warning: Future already resolved, ignoring duplicate selection")
             except Exception as e:
                 print(f"Error processing selections: {e}")
-                selections_future.set_exception(e)
+                # Only set exception if future isn't done yet
+                if not selections_future.done():
+                    selections_future.set_exception(e)
 
         await self.page.expose_function("saveElementSelections", handle_selections)
 
@@ -876,28 +906,49 @@ class BrowserElementSelector:
 
         async def handle_close():
             close_future.set_result(True)
+            # If selections weren't received, set a default empty result
+            if not selections_future.done():
+                selections_future.set_result({})
 
         await self.page.expose_function("closeSelectorTool", handle_close)
 
         # Wait for the tool to be ready
-        await ready_future
+        try:
+            await asyncio.wait_for(ready_future, timeout=30)
 
-        print("\n*******************************************")
-        print("* Element selector is ready!")
-        print("* - Use the toolbar in the top-right corner")
-        print("* - Click 'Select Element' to start selecting")
-        print("* - When finished, click 'Generate Config'")
-        print("*******************************************\n")
+            print("\n*******************************************")
+            print("* Element selector is ready!")
+            print("* - Use the toolbar in the top-right corner")
+            print("* - Click 'Select Element' to start selecting")
+            print("* - When finished, click 'Generate Config'")
+            print("*******************************************\n")
 
-        # Wait for either selections or close
-        done, _ = await asyncio.wait(
-            [selections_future, close_future],
-            return_when=asyncio.FIRST_COMPLETED
-        )
+            # Wait for either selections or close
+            done, pending = await asyncio.wait(
+                [selections_future, close_future],
+                return_when=asyncio.FIRST_COMPLETED,
+                timeout=600  # 10 minute timeout
+            )
 
-        if selections_future in done and selections_future.done():
-            return selections_future.result()
-        else:
+            # Cancel any pending futures
+            for future in pending:
+                future.cancel()
+
+            if selections_future in done and selections_future.done():
+                try:
+                    return selections_future.result()
+                except Exception as e:
+                    print(f"Error retrieving selections: {e}")
+                    return {}
+            else:
+                print("Selection timed out or was cancelled")
+                return {}
+
+        except asyncio.TimeoutError:
+            print("Timed out waiting for element selector to initialize")
+            return {}
+        except Exception as e:
+            print(f"Error during element selection: {e}")
             return {}
 
     async def create_config_from_selections(self, selections: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:

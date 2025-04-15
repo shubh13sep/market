@@ -13,6 +13,7 @@ Usage:
 
 import asyncio
 import argparse
+import json
 import os
 import sys
 import logging
@@ -70,11 +71,37 @@ async def generate_config_with_browser(url: str, output_path: Optional[str] = No
             print("   4. When finished, click 'Generate Config' button")
             print("\n⏳ Waiting for your selections... (this window will update when done)")
 
-            selections = await selector.open_element_selector()
-
-            if not selections or len(selections) == 0:
-                logger.warning("No elements were selected or config generation was cancelled")
+            # Set a timeout for the element selection
+            try:
+                selections = await asyncio.wait_for(
+                    selector.open_element_selector(),
+                    timeout=1800  # 30 minutes timeout
+                )
+            except asyncio.TimeoutError:
+                logger.error("Element selection timed out after 30 minutes")
+                print("\n⚠️ Element selection timed out. Please try again.")
                 return {}
+
+            # Check for alternative selections JSON file
+            if not selections or len(selections) == 0:
+                print("\n⚠️ No elements were selected through the browser interface.")
+                print("   If you downloaded a JSON file with your selections,")
+                print("   you can provide the path to that file:")
+
+                json_path = input("Path to selections JSON file (or press Enter to cancel): ")
+
+                if json_path and os.path.exists(json_path):
+                    try:
+                        with open(json_path, 'r') as f:
+                            selections = json.load(f)
+                        print(f"✅ Loaded {len(selections)} selections from {json_path}")
+                    except Exception as e:
+                        logger.error(f"Error loading selections from file: {e}")
+                        return {}
+                else:
+                    if json_path:
+                        print(f"❌ File not found: {json_path}")
+                    return {}
 
             print(f"\n✅ Selected {len(selections)} elements successfully!")
 
