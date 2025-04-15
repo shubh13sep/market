@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Optional
 
 # Import our modules
 from crawl4ai.config_loader import Crawl4AIConfigLoader
-from crawl4ai.scraper import Crawl4AIScraper
+from crawl4ai.crawl4ai_scraper import Crawl4AIScraper
 from crawl4ai.navigator import Crawl4AINavigator
 from crawl4ai.output_generator import Crawl4AIOutputGenerator
 from crawl4ai.proxy_manager import ProxyManager
