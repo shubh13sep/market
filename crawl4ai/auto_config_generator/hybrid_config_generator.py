@@ -41,7 +41,7 @@ class ConfigGenerator:
             llm_provider: LLM provider to use ("anthropic" or "openai")
             llm_model: Model to use
         """
-        self.llm_api_key = llm_api_key or os.environ.get('ANTHROPIC_API_KEY') or os.environ.get('OPENAI_API_KEY')
+        self.llm_api_key = self.llm_api_key = llm_api_key or self._get_api_key_from_env(llm_provider)
         self.llm_provider = llm_provider
         self.llm_model = llm_model
         self.templates_dir = os.path.join(os.path.dirname(__file__), "templates")
@@ -50,6 +50,17 @@ class ConfigGenerator:
         if not os.path.exists(self.templates_dir):
             os.makedirs(self.templates_dir)
             self._create_default_templates()
+
+    def _get_api_key_from_env(self, provider: str) -> Optional[str]:
+        """Get the appropriate API key from environment variables based on provider."""
+        if provider == "anthropic":
+            return os.environ.get('ANTHROPIC_API_KEY')
+        elif provider == "openai":
+            return os.environ.get('OPENAI_API_KEY')
+        elif provider == "google":
+            return os.environ.get('GOOGLE_API_KEY')
+        else:
+            return None
 
     def _create_default_templates(self):
         """Create default templates for common website types."""

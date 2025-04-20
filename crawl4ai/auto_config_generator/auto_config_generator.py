@@ -23,6 +23,31 @@ from crawl4ai.auto_config_generator.hybrid_config_generator import ConfigGenerat
 # Import our modules
 from crawl4ai.auto_config_generator.llm_selector_generator import LLMSelectorGenerator
 
+import asyncio
+import json
+import yaml
+import os
+import logging
+import re
+import argparse
+import tempfile
+import webbrowser
+from typing import Dict, Any, List, Optional, Union
+from urllib.parse import urlparse
+
+import aiohttp
+from playwright.async_api import async_playwright, Page, Browser, BrowserContext
+from bs4 import BeautifulSoup
+import uvicorn
+from fastapi import FastAPI, Request, Form, UploadFile, File, WebSocket
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+from crawl4ai.auto_config_generator.hybrid_config_generator import ConfigGenerator
+# Import our modules
+from crawl4ai.auto_config_generator.llm_selector_generator import LLMSelectorGenerator
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -48,10 +73,11 @@ class AutoConfigGenerator:
 
         Args:
             llm_api_key: API key for the LLM service
-            llm_provider: LLM provider to use ("anthropic" or "openai")
+            llm_provider: LLM provider to use ("anthropic", "openai", or "google")
             llm_model: Model to use
         """
-        self.llm_api_key = llm_api_key or os.environ.get('ANTHROPIC_API_KEY') or os.environ.get('OPENAI_API_KEY')
+        # Initialize with the chosen LLM provider
+        self.llm_api_key = llm_api_key or self._get_api_key_from_env(llm_provider)
         self.llm_provider = llm_provider
         self.llm_model = llm_model
         self.config_generator = ConfigGenerator(llm_api_key, llm_provider, llm_model)
@@ -59,6 +85,17 @@ class AutoConfigGenerator:
         self.ui_selections = {}
         self.page_html = ""
         self.current_url = ""
+
+    def _get_api_key_from_env(self, provider: str) -> Optional[str]:
+        """Get the appropriate API key from environment variables based on provider."""
+        if provider == "anthropic":
+            return os.environ.get('ANTHROPIC_API_KEY')
+        elif provider == "openai":
+            return os.environ.get('OPENAI_API_KEY')
+        elif provider == "google":
+            return os.environ.get('GOOGLE_API_KEY')
+        else:
+            return None
 
     async def capture_headers(self, url: str) -> Dict[str, str]:
         """
@@ -230,7 +267,7 @@ class AutoConfigGenerator:
                     extraction_spec[key] = None
 
             # Have LLM optimize our selectors
-            logger.info(f"Optimizing selectors with LLM")
+            logger.info(f"Optimizing selectors with LLM ({self.llm_provider} - {self.llm_model})")
             optimized_selectors = await selector_generator.create_full_extraction_config(
                 self.current_url, self.page_html, extraction_spec
             )
@@ -340,7 +377,6 @@ class AutoConfigGenerator:
 
         logger.info(f"Generated complete configuration with {len(selectors)} selectors")
         return config
-
 
     async def validate_config(self, config: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         """
@@ -456,13 +492,14 @@ class ElementSelectorUI:
                             <div class="mb-3">
                                 <label for="llmProvider" class="form-label">LLM Provider (Optional)</label>
                                 <select class="form-select" id="llmProvider" name="llm_provider">
+                                    <option value="anthropic">Google Gemini</option>
                                     <option value="anthropic">Anthropic Claude</option>
                                     <option value="openai">OpenAI GPT</option>
                                 </select>
                             </div>
                             <div class="mb-3">
                                 <label for="llmModel" class="form-label">LLM Model (Optional)</label>
-                                <input type="text" class="form-control" id="llmModel" name="llm_model" value="claude-3-haiku-20240307">
+                                <input type="text" class="form-control" id="llmModel" name="llm_model" value="google/gemini-2.5-pro-exp-03-25:free">
                             </div>
                             <div class="mb-3">
                                 <label for="llmApiKey" class="form-label">API Key (Optional)</label>
@@ -958,20 +995,40 @@ document.addEventListener('DOMContentLoaded', function() {
     // Toggle inspector
     document.getElementById('inspectorToggle').addEventListener('click', function() {
         const iframe = document.getElementById('pageFrame');
-        const frameContent = iframe.contentDocument || iframe.contentWindow.document;
+    // Make sure we can access the iframe content
+    const frameContent = iframe.contentDocument || iframe.contentWindow.document;
+    
+    inspectorEnabled = !inspectorEnabled;
 
-        inspectorEnabled = !inspectorEnabled;
+    console.log("Inspector toggled:", inspectorEnabled); // Add debugging log
+    
+    if (inspectorEnabled) {
+        this.textContent = 'Disable Inspector';
+        this.classList.remove('btn-info');
+        this.classList.add('btn-warning');
 
-        if (inspectorEnabled) {
-            this.textContent = 'Disable Inspector';
-            this.classList.remove('btn-info');
-            this.classList.add('btn-warning');
-
-            // Enable inspector in iframe
-            if (frameContent && frameContent.defaultView) {
+        // Enable inspector in iframe - THIS MIGHT BE THE ISSUE
+        if (frameContent && frameContent.defaultView) {
+            console.log("Attempting to enable inspector in iframe");
+            try {
                 frameContent.defaultView.toggleInspector(true);
+            } catch (e) {
+                console.error("Error toggling inspector:", e);
+                // Fallback method to inject function if not available
+                const script = frameContent.createElement('script');
+                script.textContent = `
+                    function toggleInspector(enable) {
+                        console.log("Inspector enabled:", enable);
+                        window.inspector = enable;
+                    }
+                    toggleInspector(true);
+                `;
+                frameContent.body.appendChild(script);
             }
         } else {
+            console.error("Cannot access iframe content");
+        }
+    } else {
             this.textContent = 'Enable Inspector';
             this.classList.remove('btn-warning');
             this.classList.add('btn-info');
@@ -1331,6 +1388,7 @@ document.addEventListener('DOMContentLoaded', function() {
         validationDiv.innerHTML = html;
     }
 
+
     // Save config button
     document.getElementById('saveConfigBtn').addEventListener('click', async function() {
         const configYaml = editor.getValue();
@@ -1381,6 +1439,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    try {
+        const frameContent = iframe.contentDocument || iframe.contentWindow.document;
+        console.log("Successfully accessed iframe document");
+    } catch (e) {
+        console.error("Cross-origin error:", e);
+        alert("a. Try using the URL proxy option.");
+    }
     // Initialize UI
     showLoading();
 });

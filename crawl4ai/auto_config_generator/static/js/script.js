@@ -268,20 +268,40 @@ document.addEventListener('DOMContentLoaded', function() {
     // Toggle inspector
     document.getElementById('inspectorToggle').addEventListener('click', function() {
         const iframe = document.getElementById('pageFrame');
-        const frameContent = iframe.contentDocument || iframe.contentWindow.document;
+    // Make sure we can access the iframe content
+    const frameContent = iframe.contentDocument || iframe.contentWindow.document;
+    
+    inspectorEnabled = !inspectorEnabled;
 
-        inspectorEnabled = !inspectorEnabled;
+    console.log("Inspector toggled:", inspectorEnabled); // Add debugging log
+    
+    if (inspectorEnabled) {
+        this.textContent = 'Disable Inspector';
+        this.classList.remove('btn-info');
+        this.classList.add('btn-warning');
 
-        if (inspectorEnabled) {
-            this.textContent = 'Disable Inspector';
-            this.classList.remove('btn-info');
-            this.classList.add('btn-warning');
-
-            // Enable inspector in iframe
-            if (frameContent && frameContent.defaultView) {
+        // Enable inspector in iframe - THIS MIGHT BE THE ISSUE
+        if (frameContent && frameContent.defaultView) {
+            console.log("Attempting to enable inspector in iframe");
+            try {
                 frameContent.defaultView.toggleInspector(true);
+            } catch (e) {
+                console.error("Error toggling inspector:", e);
+                // Fallback method to inject function if not available
+                const script = frameContent.createElement('script');
+                script.textContent = `
+                    function toggleInspector(enable) {
+                        console.log("Inspector enabled:", enable);
+                        window.inspector = enable;
+                    }
+                    toggleInspector(true);
+                `;
+                frameContent.body.appendChild(script);
             }
         } else {
+            console.error("Cannot access iframe content");
+        }
+    } else {
             this.textContent = 'Enable Inspector';
             this.classList.remove('btn-warning');
             this.classList.add('btn-info');
@@ -641,6 +661,7 @@ document.addEventListener('DOMContentLoaded', function() {
         validationDiv.innerHTML = html;
     }
 
+
     // Save config button
     document.getElementById('saveConfigBtn').addEventListener('click', async function() {
         const configYaml = editor.getValue();
@@ -691,6 +712,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    try {
+        const frameContent = iframe.contentDocument || iframe.contentWindow.document;
+        console.log("Successfully accessed iframe document");
+    } catch (e) {
+        console.error("Cross-origin error:", e);
+        alert("a. Try using the URL proxy option.");
+    }
     // Initialize UI
     showLoading();
 });

@@ -42,7 +42,12 @@
                             </div>
                             <div class="mb-3">
                                 <label for="llmModel" class="form-label">LLM Model</label>
-                                <input type="text" class="form-control" id="llmModel" name="llm_model" value="claude-3-haiku-20240307">
+                                <select class="form-select" id="llmModel" name="llm_model">
+                                    <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                                    <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
+                                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                    <option value="google/gemini-2.5-pro-exp-03-25:free">Gemini 2.5 Pro</option>
+                                </select>
                             </div>
                             <div class="mb-3">
                                 <label for="llmApiKey" class="form-label">API Key</label>

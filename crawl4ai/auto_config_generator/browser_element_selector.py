@@ -4,6 +4,7 @@ import webbrowser
 import os
 import base64
 from pathlib import Path
+from random import random
 from typing import Dict, Any, List, Optional, Union
 
 import asyncio
@@ -242,7 +243,8 @@ class BrowserElementSelector:
 
             # Navigate to the URL
             print(f"Navigating to {url}...")
-            response = await self.page.goto(url, wait_until='networkidle')
+            #response = await self.navigate_to(url)
+            response = await self.page.goto(url, wait_until='domcontentloaded', timeout=60000)
 
             if not response:
                 print(f"Failed to get response from {url}")

@@ -1,8 +1,40 @@
-<select class="form-select" id="llmProvider" name="llm_provider">
-  <option value="google">Google Gemini</option>
-  <option value="anthropic">Anthropic Claude</option>
-  <option value="openai">OpenAI GPT</option>
-</select>
+
+    
+// Add this to script.js
+document.getElementById('llmProvider').addEventListener('change', function() {
+    const provider = this.value;
+    const modelSelect = document.getElementById('llmModel');
+    
+    // Clear current options
+    modelSelect.innerHTML = '';
+    
+    // Add appropriate options based on provider
+    if (provider === 'anthropic') {
+        addOption(modelSelect, 'claude-3-haiku-20240307', 'Claude 3 Haiku');
+        addOption(modelSelect, 'claude-3-sonnet-20240229', 'Claude 3 Sonnet');
+        addOption(modelSelect, 'claude-3-opus-20240229', 'Claude 3 Opus');
+    } else if (provider === 'openai') {
+        addOption(modelSelect, 'gpt-4-turbo', 'GPT-4 Turbo');
+        addOption(modelSelect, 'gpt-4', 'GPT-4');
+        addOption(modelSelect, 'gpt-3.5-turbo', 'GPT-3.5 Turbo');
+    } else if (provider === 'google') {
+        addOption(modelSelect, 'google/gemini-2.5-pro-exp-03-25:free', 'Gemini 2.5 Pro');
+        addOption(modelSelect, 'google/gemini-1.5-pro', 'Gemini 1.5 Pro');
+    }
+});
+
+// Helper function to add options
+function addOption(select, value, text) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = text;
+    select.appendChild(option);
+}
+
+// Initialize model options on page load
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('llmProvider').dispatchEvent(new Event('change'));
+});
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize CodeMirror

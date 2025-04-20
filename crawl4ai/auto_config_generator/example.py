@@ -22,7 +22,7 @@ async def scrape_with_auto_config():
     print("\n=== Scraping with Auto-Generated Configuration ===\n")
 
     # The URL to scrape
-    url = "https://books.toscrape.com/catalogue/category/books/mystery_3/index.html"
+    url = "https://forum.valuepickr.com/t/pondy-oxide-chemicals/1133"
 
     # Step 1: Generate configuration automatically
     print(f"Generating configuration for {url}...")
@@ -94,8 +94,8 @@ async def example_interactive_scraping():
     """
     from crawl4ai.auto_config_generator.browser_element_selector import BrowserElementSelector
 
-    url = "https://news.ycombinator.com/"
-
+    #url = "https://news.ycombinator.com/"
+    url = "https://forum.valuepickr.com/t/pondy-oxide-chemicals/1133"
     print(f"\n=== Interactive Scraping for {url} ===\n")
     print("This will open a browser window for you to select elements...")
     print("Instructions:")
